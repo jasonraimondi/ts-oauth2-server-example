@@ -27,9 +27,12 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     /* Output Options */
     "removeComments": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["./src/global.d.ts"]
   },
   "include": ["src/**/*.ts"]
 }
