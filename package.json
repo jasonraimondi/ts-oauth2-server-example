@@ -1,20 +1,21 @@
 {
-	"name": "jmondi-oauth2-example",
-	"scripts": {
-		"dev": "tsx --watch src/main.ts"
-	},
-	"dependencies": {
-		"@jmondi/oauth2-server": "^3.0.0",
-		"@nestjs/common": "^9.4.2",
-		"@nestjs/core": "^9.4.2",
-		"reflect-metadata": "^0.1.13",
-		"rxjs": "^7.8.1"
-	},
-	"devDependencies": {
-		"@nestjs/platform-express": "^9.4.2",
-		"@types/node": "^20.2.5",
-		"prettier": "^2.8.8",
-		"tsx": "^3.12.7",
-		"typescript": "^5.1.3"
-	}
+  "name": "jmondi-oauth2-example",
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@jmondi/oauth2-server": "^3.0.0",
+    "@nestjs/common": "^9.4.2",
+    "@nestjs/core": "^9.4.2",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/platform-express": "^9.4.2",
+    "@types/node": "^20.2.5",
+    "prettier": "^2.8.8",
+    "tsx": "^3.12.7",
+    "typescript": "^5.1.3"
+  }
 }
