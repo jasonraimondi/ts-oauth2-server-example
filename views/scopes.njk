@@ -1,0 +1,41 @@
+{% extends "auth/layouts/index.njk" %}
+
+{% block main %}
+<div>
+    <p>{{ user.name }}</p>
+    <p>Do you authorize this application {{ client.name }} the following scopes:</p>
+    <ul>
+        {% for scope in scopes %}
+            <li>{{ scope.description }}</li>
+        {% else %}
+            <li>No scopes! Fix this empty state</li>
+        {% endfor %}
+    </ul>
+    <ul class="yes-no">
+        <li>
+            <form action="{{ submitUrl | safe }}" method="POST">
+                <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+                <input name="accept" value="yes" type="hidden" style="display: none;">
+                <button>Yes</button>
+            </form>
+        </li>
+        <li>
+            <form action="{{ submitUrl | safe }}" method="POST">
+                <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                <input name="accept" value="no" type="hidden" style="display: none;">
+                <button>No</button>
+            </form>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .yes-no {
+      list-style-type: none;
+      display: flex;
+    }
+</style>
+{% endblock %}

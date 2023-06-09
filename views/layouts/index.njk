@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charSet="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, width=device-width" />
+
+    <title>{% block headTitle %}OAuth2{% endblock %}</title>
+    <meta name="application-name" content="Scratchy">
+    <meta name="description" content="{% block headDescription %}OAuth2 Rocks{% endblock %}">
+    {% block styles %}{% endblock %}
+    {% block headScripts %}{% endblock %}
+</head>
+<body>
+    <main>{% block main %}{% endblock %}</main>
+    {% block scripts %}{% endblock %}
+    {% block extraScripts %}{% endblock %}
+</body>
+</html>

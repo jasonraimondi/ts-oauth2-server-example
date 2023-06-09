@@ -32,7 +32,6 @@ export class AuthorizationServerService extends JmondiAuthServer {
           { grant: "authorization_code", authCodeRepository, userRepository },
           { grant: "password", userRepository },
         );
-        console.log("I am a factory", typeof prisma, typeof jwt, typeof authorizationServer);
         return authorizationServer;
       },
       inject: [PrismaService, MyCustomJwtService],
