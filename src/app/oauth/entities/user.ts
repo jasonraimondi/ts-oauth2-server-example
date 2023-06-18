@@ -24,16 +24,4 @@ export class User implements UserModel, OAuthUser {
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
   }
-
-  async setPassword(password: string) {
-    this.passwordHash = await bcrypt.hash(password, 12);
-  }
-
-  async verifyPassword(password: string) {
-    if (!this.passwordHash) throw new Error("password not set");
-
-    const validPassword = await bcrypt.compare(password, this.passwordHash);
-
-    if (!validPassword) throw new Error("invalid password");
-  }
 }

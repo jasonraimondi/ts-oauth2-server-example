@@ -29,6 +29,7 @@ export class Token implements TokenModel, OAuthToken {
   user: User | null;
   userId: string | null;
   scopes: Scope[];
+  updatedAt: Date | null;
   createdAt: Date;
 
   constructor({ client, user, scopes, ...entity }: TokenModel & Required & Relations) {
@@ -41,7 +42,8 @@ export class Token implements TokenModel, OAuthToken {
     this.client = new Client(client);
     this.clientId = entity.clientId;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.createdAt = new Date();
+    this.createdAt = entity.createdAt ?? new Date();
+    this.updatedAt = entity.updatedAt ?? null;
   }
 
   get isRevoked() {

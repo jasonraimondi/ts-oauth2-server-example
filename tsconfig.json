@@ -1,38 +1,20 @@
 {
   "compilerOptions": {
     "outDir": "dist",
-    "target": "esnext",
-    "module": "node16",
-    "moduleResolution": "node16",
-
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-
-    /* Strict Type-Checking Options */
-    "strict": true,
-    "noImplicitAny": true,
-    "strictPropertyInitialization": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-
-    /* Additional Checks */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
 
     /* Advanced Options */
-    "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
 
     /* Output Options */
     "removeComments": true,
     "sourceMap": true,
-    "types": ["./src/global.d.ts"]
+    "types": ["./src/global.d.ts", "csrf-csrf"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "prisma/**/*.ts"]
 }

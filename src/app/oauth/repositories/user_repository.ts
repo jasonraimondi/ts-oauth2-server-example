@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { Client } from "../entities/client.js";
 import { User } from "../entities/user.js";
+import { verifyPasswordOrThrow } from "../../../lib/password.js";
 
 export class UserRepository implements OAuthUserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -15,13 +16,12 @@ export class UserRepository implements OAuthUserRepository {
   ): Promise<User> {
     const user = new User(
       await this.prisma.user.findUnique({
-        rejectOnNotFound: true,
         where: { id: identifier },
       }),
     );
 
     // verity password and if user is allowed to use grant, etc...
-    if (password) await user.verifyPassword(password);
+    if (password) await verifyPasswordOrThrow(password, user.passwordHash);
 
     return user;
   }

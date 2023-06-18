@@ -16,7 +16,6 @@ export class TokenRepository implements OAuthTokenRepository {
 
   async findById(accessToken: string): Promise<Token> {
     const token = await this.prisma.oAuthToken.findUnique({
-      rejectOnNotFound: true,
       where: {
         accessToken,
       },
@@ -40,12 +39,13 @@ export class TokenRepository implements OAuthTokenRepository {
       user: user ?? null,
       userId: user?.id ?? null,
       scopes,
+      createdAt: new Date(),
+      updatedAt: null,
     });
   }
 
   async getByRefreshToken(refreshToken: string): Promise<Token> {
     const token = await this.prisma.oAuthToken.findUnique({
-      rejectOnNotFound: true,
       where: { refreshToken },
       include: {
         client: true,

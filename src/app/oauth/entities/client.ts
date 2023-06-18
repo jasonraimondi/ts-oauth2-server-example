@@ -15,6 +15,7 @@ export class Client implements ClientModel, OAuthClient {
   allowedGrants: GrantIdentifier[];
   scopes: Scope[];
   createdAt: Date;
+  updatedAt: Date | null;
 
   constructor({ scopes, ...entity }: ClientModel & Partial<Relations>) {
     this.id = entity.id;
@@ -23,6 +24,7 @@ export class Client implements ClientModel, OAuthClient {
     this.redirectUris = entity.redirectUris;
     this.allowedGrants = entity.allowedGrants;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.createdAt = new Date();
+    this.createdAt = entity.createdAt ?? new Date();
+    this.updatedAt = entity.updatedAt ?? null;
   }
 }

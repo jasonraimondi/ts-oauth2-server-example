@@ -9,7 +9,6 @@ export class ClientRepository implements OAuthClientRepository {
   async getByIdentifier(clientId: string): Promise<Client> {
     return new Client(
       await this.prisma.oAuthClient.findUnique({
-        rejectOnNotFound: true,
         where: {
           id: clientId,
         },

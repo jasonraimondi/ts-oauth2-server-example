@@ -16,7 +16,6 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
 
   async getByIdentifier(authCodeCode: string): Promise<AuthCode> {
     const entity = await this.prisma.oAuthAuthCode.findUnique({
-      rejectOnNotFound: true,
       where: {
         code: authCodeCode,
       },
@@ -44,6 +43,8 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       user,
       userId: user?.id ?? null,
       scopes,
+      createdAt: new Date(),
+      updatedAt: null,
     });
   }
 

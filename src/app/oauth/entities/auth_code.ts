@@ -29,8 +29,9 @@ export class AuthCode implements AuthCodeModel, OAuthAuthCode {
   client: Client;
   clientId: string;
   expiresAt: Date;
-  createdAt: Date;
   scopes: Scope[];
+  createdAt: Date;
+  updatedAt: Date | null;
 
   constructor({ user, client, scopes, ...entity }: AuthCodeModel & Required & Optional) {
     this.code = entity.code;
@@ -42,8 +43,9 @@ export class AuthCode implements AuthCodeModel, OAuthAuthCode {
     this.client = new Client(client);
     this.clientId = entity.clientId;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.expiresAt = new Date();
-    this.createdAt = new Date();
+    this.expiresAt = entity.expiresAt ?? new Date();
+    this.createdAt = entity.createdAt ?? new Date();
+    this.updatedAt = entity.updatedAt ?? null;
   }
 
   get isExpired(): boolean {

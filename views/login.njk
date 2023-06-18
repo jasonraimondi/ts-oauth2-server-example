@@ -1,23 +1,22 @@
 {% extends "layouts/index.njk" %}
 
 {% block main %}
-
-  <h1>Scratchy Login</h1>
+  <h1>Login</h1>
 
   <div>
     <form action="{{ loginFormAction }}" method="POST">
 
-      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-
       <fieldset>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
         <label>
           Email
-          <input type="email" name="email" value="jason@raimondi.us" required>
+          <input type="email" name="email" value="jason@example.com" required>
         </label>
 
         <label>
           Password
-          <input type="password" name="password" value="jasonraimondi" required>
+          <input type="password" name="password" value="password123" required>
         </label>
 
         <a href="{{ forgotPasswordLink }}">Forgot Your Password?</a>
@@ -46,29 +45,13 @@
       border-radius: 4px;
     }
 
-    .button svg {
-      max-height: 1em;
-      fill: currentColor;
-      stroke: currentColor;
-      margin-right: 0.3rem;
-      position: relative;
-      top: 2px;
-    }
-
-    .button.google {
-      background-color: #4285F4;
-    }
-
-    .button.github {
-      background-color: #181717;
-    }
-
     label {
       display: block;
     }
 
     fieldset {
       padding: 0;
+      border: none;
     }
   </style>
 {% endblock %}

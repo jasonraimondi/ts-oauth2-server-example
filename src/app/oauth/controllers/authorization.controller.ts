@@ -8,7 +8,7 @@ import {
 
 import { AuthorizationServerService } from "../services/authorization_server.service.js";
 
-@Controller("oauth2/authorization")
+@Controller("oauth2/authorize")
 export class AuthorizationController {
   constructor(private readonly oauth: AuthorizationServerService) {}
 
@@ -16,21 +16,31 @@ export class AuthorizationController {
   async get(@Req() req: Request, @Res() res: Response) {
     const request = requestFromExpress(req);
 
+    const user = req.user;
+    console.log({ user });
+
     try {
       // Validate the HTTP request and return an AuthorizationRequest.
       const authRequest = await this.oauth.validateAuthorizationRequest(request);
 
       // You will probably redirect the user to a login endpoint.
-      if (!req.user) {
-        res.redirect("/login");
+      if (!user) {
+        const [_, params] = req.url.split("?");
+        res.status(302).redirect(`/login?${params}`);
         return;
       }
+
       // After login, the user should be redirected back with user in the session.
       // You will need to manage the authorization query on the round trip.
       // The auth request object can be serialized and saved into a user's session.
 
       // Once the user has logged in set the user on the AuthorizationRequest
-      authRequest.user = req.user;
+      authRequest.user = user;
+
+      console.log("BOOYA IT WORKED!!!");
+
+      // @todo don't hardcode this value...
+      authRequest.isAuthorizationApproved = true;
 
       // Once the user has approved or denied the client update the status
       // (true = approved, false = denied)
