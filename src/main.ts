@@ -42,6 +42,7 @@ async function bootstrap() {
       enableDebugMessages: true,
     }),
   );
+  app.setGlobalPrefix("api");
 
   await app.listen(3000);
 
@@ -49,19 +50,7 @@ async function bootstrap() {
 }
 
 function generateLoginLink() {
-  const state = base64urlencode(randomBytes(5));
-  const codeVerifier = base64urlencode(randomBytes(40));
-  const codeChallenge = base64urlencode(createHash("sha256").update(codeVerifier).digest("hex"));
-
-  const url = new URL("http://localhost:3000/oauth2/authorize");
-  url.searchParams.set("client_id", "0e2ec2df-ee53-4327-a472-9d78c278bdbb");
-  url.searchParams.set("redirect_uri", "http://example.com/callback");
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "");
-  url.searchParams.set("state", state);
-  url.searchParams.set("code_challenge", codeChallenge);
-  url.searchParams.set("code_challenge_method", "S256");
-  return url.toString();
+  return "http://localhost:5173/";
 }
 
 bootstrap();

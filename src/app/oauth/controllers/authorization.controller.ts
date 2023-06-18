@@ -26,7 +26,7 @@ export class AuthorizationController {
       // You will probably redirect the user to a login endpoint.
       if (!user) {
         const [_, params] = req.url.split("?");
-        res.status(302).redirect(`/login?${params}`);
+        res.status(302).redirect(`/api/login?${params}`);
         return;
       }
 

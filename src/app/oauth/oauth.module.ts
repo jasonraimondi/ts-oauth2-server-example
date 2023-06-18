@@ -7,7 +7,7 @@ import { AuthorizationController } from "./controllers/authorization.controller.
 import { TokenController } from "./controllers/token.controller.js";
 import { RevokeController } from "./controllers/revoke.controller.js";
 import { LoginController } from "./controllers/login.controller.js";
-import { CurrentUserMiddleware } from "./current_user.middleware.js";
+import { CurrentUserMiddleware } from "../current_user.middleware.js";
 
 @Module({
   imports: [PrismaModule],

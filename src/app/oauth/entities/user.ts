@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { User as UserModel } from "@prisma/client";
 import { OAuthUser } from "@jmondi/oauth2-server";
 

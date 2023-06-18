@@ -1,9 +1,9 @@
 import { Injectable, NestMiddleware } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service.js";
 import { Response, Request } from "express";
-import { MyCustomJwtService } from "./services/custom_jwt_service.js";
 
-import { parseCookies } from "../../lib/cookies.js";
+import { PrismaService } from "./prisma/prisma.service.js";
+import { MyCustomJwtService } from "./oauth/services/custom_jwt_service.js";
+import { parseCookies } from "../lib/cookies.js";
 
 @Injectable()
 export class CurrentUserMiddleware implements NestMiddleware {
@@ -34,7 +34,6 @@ export class CurrentUserMiddleware implements NestMiddleware {
 
     if (!user) return next();
 
-    // @ts-ignore
     req.user = user;
 
     next();

@@ -6,6 +6,7 @@ import {
   Render,
   Req,
   Res,
+  HttpStatus,
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Response, Request } from "express";
@@ -18,7 +19,6 @@ import { AuthorizationServerService } from "../services/authorization_server.ser
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { verifyPasswordOrThrow } from "../../../lib/password.js";
 import { MyCustomJwtService } from "../services/custom_jwt_service.js";
-import { csrf } from "../../../lib/csrf.js";
 
 export class LoginBody {
   @IsEmail()
@@ -99,6 +99,7 @@ export class LoginController {
 
     // const query = querystring.stringify(req.query as any);
     // await this.loginService.loginAndRedirect(user, req.ip, res, query);
-    return "success";
+    const [_, query] = req.url.split("?");
+    res.status(HttpStatus.FOUND).redirect(`/api/oauth2/authorize?${query}`);
   }
 }
