@@ -17,7 +17,6 @@ export class AuthorizationController {
     const request = requestFromExpress(req);
 
     const user = req.user;
-    console.log({ user });
 
     try {
       // Validate the HTTP request and return an AuthorizationRequest.

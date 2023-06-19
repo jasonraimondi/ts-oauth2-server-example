@@ -8,6 +8,7 @@ import { TokenController } from "./controllers/token.controller.js";
 import { RevokeController } from "./controllers/revoke.controller.js";
 import { LoginController } from "./controllers/login.controller.js";
 import { CurrentUserMiddleware } from "../current_user.middleware.js";
+import { csrf } from "../../lib/csrf.js";
 
 @Module({
   imports: [PrismaModule],
@@ -24,6 +25,7 @@ import { CurrentUserMiddleware } from "../current_user.middleware.js";
 })
 export class OAuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(csrf.doubleCsrfProtection).forRoutes(LoginController);
     consumer.apply(CurrentUserMiddleware).forRoutes({
       path: "*",
       method: RequestMethod.ALL,

@@ -27,7 +27,9 @@ void (async function () {
     create: {
       id: clientId,
       name: "Sample Client",
-      redirectUris: ["http://example.com/callback"],
+      secret: null,
+      allowedGrants: ["authorization_code", "client_credentials", "refresh_token"],
+      redirectUris: ["http://localhost:5173/callback"],
     },
   });
 

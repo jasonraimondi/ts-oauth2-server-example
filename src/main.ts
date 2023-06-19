@@ -9,12 +9,9 @@ import cookieParser from "cookie-parser";
 import nunjucks from "nunjucks";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { randomBytes, createHash } from "node:crypto";
 
 import { AppModule } from "./app.module.js";
 import { PrismaService } from "./app/prisma/prisma.service.js";
-import { base64urlencode } from "./lib/base64.js";
-import { csrf } from "./lib/csrf.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -24,12 +21,10 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
   app.use(cookieParser("my-secret"));
-  app.use(csrf.doubleCsrfProtection);
 
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
 
-  // app.useStaticAssets({ root: join(__dirname, "..", "public") });
   const templatesDir = join(__dirname, "..", "views");
   nunjucks.configure(templatesDir, {
     autoescape: true,
@@ -46,11 +41,7 @@ async function bootstrap() {
 
   await app.listen(3000);
 
-  console.log(`Sample Login: ${generateLoginLink()}`);
+  console.log(`Sample Login: http://localhost:5173/`);
 }
 
-function generateLoginLink() {
-  return "http://localhost:5173/";
-}
-
-bootstrap();
+bootstrap().then().catch(console.error);

@@ -1,6 +1,7 @@
 import {
   AuthorizationServer as JmondiAuthServer,
   AuthorizationServerOptions,
+  DateInterval,
 } from "@jmondi/oauth2-server";
 import { Injectable, Provider } from "@nestjs/common";
 
@@ -28,9 +29,11 @@ export class AuthorizationServerService extends JmondiAuthServer {
           options,
         );
         authorizationServer.enableGrantTypes(
-          "client_credentials",
-          { grant: "authorization_code", authCodeRepository, userRepository },
-          { grant: "password", userRepository },
+          ["refresh_token", new DateInterval("1h")],
+          [
+            { grant: "authorization_code", authCodeRepository, userRepository },
+            new DateInterval("1h"),
+          ],
         );
         return authorizationServer;
       },

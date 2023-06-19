@@ -80,7 +80,7 @@ export class LoginController {
       },
     });
 
-    const expiresAt = new DateDuration("5m");
+    const expiresAt = new DateDuration("30d");
 
     const token = await this.jwt.sign({
       userId: user.id,

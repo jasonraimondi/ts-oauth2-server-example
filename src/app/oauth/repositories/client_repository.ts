@@ -8,7 +8,7 @@ export class ClientRepository implements OAuthClientRepository {
 
   async getByIdentifier(clientId: string): Promise<Client> {
     return new Client(
-      await this.prisma.oAuthClient.findUnique({
+      await this.prisma.oAuthClient.findUniqueOrThrow({
         where: {
           id: clientId,
         },
@@ -27,6 +27,7 @@ export class ClientRepository implements OAuthClientRepository {
     if (client.secret && client.secret !== clientSecret) {
       return false;
     }
+    // @todo this is returning false, and it is a really bad error that is not helpful
     return client.allowedGrants.includes(grantType);
   }
 }

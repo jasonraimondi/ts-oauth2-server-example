@@ -4,7 +4,15 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+dependencies:
+  wretch:
+    specifier: ^2.5.2
+    version: 2.5.2
+
 devDependencies:
+  '@jmondi/browser-storage':
+    specifier: ^1.4.0
+    version: 1.4.0
   '@sveltejs/adapter-auto':
     specifier: ^2.0.0
     version: 2.1.0(@sveltejs/kit@1.20.4)
@@ -14,6 +22,12 @@ devDependencies:
   '@sveltejs/kit':
     specifier: ^1.5.0
     version: 1.20.4(svelte@3.59.1)(vite@4.3.9)
+  '@types/js-cookie':
+    specifier: ^3.0.3
+    version: 3.0.3
+  js-cookie:
+    specifier: ^3.0.5
+    version: 3.0.5
   prettier:
     specifier: ^2.8.0
     version: 2.8.8
@@ -236,6 +250,11 @@ packages:
     dev: true
     optional: true
 
+  /@jmondi/browser-storage@1.4.0:
+    resolution: {integrity: sha512-du2OHi8nYGuPz5ne/7tCC4CFVP17/5MZm4p/QPiK489Lxv7W73axQASlbeJ6QLQwSz+eMlB/RroLYcFRHGSC4A==}
+    engines: {node: '>=18.0.0'}
+    dev: true
+
   /@jridgewell/resolve-uri@3.1.0:
     resolution: {integrity: sha512-F2msla3tad+Mfht5cJq7LSXcdudKTWCVYUgw6pLFOOHSTtZlj6SWNYAp+AhuqLmWdBO2X5hPrLcu8cVP8fy28w==}
     engines: {node: '>=6.0.0'}
@@ -363,6 +382,10 @@ packages:
 
   /@types/cookie@0.5.1:
     resolution: {integrity: sha512-COUnqfB2+ckwXXSFInsFdOAWQzCCx+a5hq2ruyj+Vjund94RJQd4LG2u9hnvJrTgunKAaax7ancBYlDrNYxA0g==}
+    dev: true
+
+  /@types/js-cookie@3.0.3:
+    resolution: {integrity: sha512-Xe7IImK09HP1sv2M/aI+48a20VX+TdRJucfq4vfRVy6nWN8PYPOEnlMRSgxJAgYQIXJVL8dZ4/ilAM7dWNaOww==}
     dev: true
 
   /@types/pug@2.0.6:
@@ -607,6 +630,11 @@ packages:
   /is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
+    dev: true
+
+  /js-cookie@3.0.5:
+    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
+    engines: {node: '>=14'}
     dev: true
 
   /kleur@4.1.5:
@@ -1007,3 +1035,8 @@ packages:
   /wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
     dev: true
+
+  /wretch@2.5.2:
+    resolution: {integrity: sha512-6Pd1GvoNYzf17WH1jggzsq8E00UQqiO0kJvLS1dmIEnX8IE0zBfd77Sid5IqTGYVKhad88ygTudbvHdsvPvmCA==}
+    engines: {node: '>=14'}
+    dev: false

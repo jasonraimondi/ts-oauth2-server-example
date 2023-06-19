@@ -3,17 +3,13 @@ import { Response, Request } from "express";
 
 import { PrismaService } from "./prisma/prisma.service.js";
 import { MyCustomJwtService } from "./oauth/services/custom_jwt_service.js";
-import { parseCookies } from "../lib/cookies.js";
 
 @Injectable()
 export class CurrentUserMiddleware implements NestMiddleware {
   constructor(private readonly prisma: PrismaService, private readonly jwt: MyCustomJwtService) {}
 
   async use(req: Request, _res: Response, next: () => void) {
-    // it seems like req.cookies isnt available in middlewares,
-    // so I'm just parsing the raw cookies from the header
-    const cookies = parseCookies(req.headers.cookie);
-    const jid = cookies.jid;
+    const jid = req.cookies.jid;
 
     if (!jid) return next();
 
