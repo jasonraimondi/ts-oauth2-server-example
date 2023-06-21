@@ -1,5 +1,5 @@
 {
-  "name": "jmondi-oauth2-example",
+  "name": "jmondi-oauth2-example-server",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",

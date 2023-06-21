@@ -1,5 +1,5 @@
 {
-	"name": "web",
+  	"name": "jmondi-oauth2-example-client",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
