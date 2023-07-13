@@ -1,6 +1,6 @@
 # @jmondi/oauth2-server-example
 
-This is an example implementation of the [@jmondi/oauth2-server](https://github.com/jasonraimondi/ts-oauth2-server) project using a NestJS/Express server and a Sveltekit client. This is supposed to be a real-world example of how to implement the package in a production application.
+This is an example implementation of the [@jmondi/oauth2-server](https://github.com/jasonraimondi/ts-oauth2-server) project using a NestJS/Express server and a Sveltekit client. This is closer to a real-world example of how to implement the package in a production application.
 
 ## Getting Started
 

@@ -1,11 +1,7 @@
-import { type Adapter, BrowserStorage, LocalStorage, SessionStorage } from "@jmondi/browser-storage";
-import Cookies from "js-cookie";
+import { BrowserStorage, SessionStorage, type Adapter } from "@jmondi/browser-storage";
+import Cookies, { type CookieAttributes } from "js-cookie";
 
 export class CookieAdapter implements Adapter {
-  clear(): void {
-    throw new Error("CookieStorage.clear is not implemented")
-  }
-
   getItem(key: string): string | null {
     return Cookies.get(key) ?? null;
   }
@@ -14,13 +10,24 @@ export class CookieAdapter implements Adapter {
     Cookies.remove(key);
   }
 
-  setItem(key: string, value: string): void {
-    Cookies.set(key, value, { expires: 7 });
+  setItem(key: string, value: string, config: CookieAttributes = {}): void {
+    Cookies.set(key, value, config);
   }
 }
 
-const prefix = "app_"
+const prefix = "app_";
 
-export const sessionStorageService = new SessionStorage({ prefix });
-export const localStorageService = new LocalStorage({ prefix });
-export const cookieStorageService = new BrowserStorage({ prefix, adapter: new CookieAdapter() });
+const sessionStorage = new SessionStorage({ prefix });
+export const SESSION_STORAGE = sessionStorage.defineGroup({
+  state: "state",
+  verifier: "verifier",
+});
+const cookieStorage = new BrowserStorage<CookieAttributes>({
+  prefix,
+  adapter: new CookieAdapter(),
+});
+export const COOKIE_STORAGE = cookieStorage.defineGroup({
+  accessToken: "at",
+  refreshToken: "rt",
+});
+

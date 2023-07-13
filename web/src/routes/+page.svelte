@@ -1,8 +1,8 @@
 <script>
-  import { cookieStorageService } from '$lib/browser_storage';
+  import { COOKIE_STORAGE } from "$lib/browser_storage";
 
-  let accessToken = cookieStorageService.get("access_token")
-  let refreshToken = cookieStorageService.get("refresh_token")
+  let accessToken = COOKIE_STORAGE.accessToken.get();
+  let refreshToken = COOKIE_STORAGE.refreshToken.get();
 </script>
 
 <p>Access Token: {accessToken}</p>

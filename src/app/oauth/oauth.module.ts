@@ -9,10 +9,17 @@ import { RevokeController } from "./controllers/revoke.controller.js";
 import { LoginController } from "./controllers/login.controller.js";
 import { CurrentUserMiddleware } from "../current_user.middleware.js";
 import { csrf } from "../../lib/csrf.js";
+import { ScopesController } from "./controllers/scopes.controller.js";
 
 @Module({
   imports: [PrismaModule],
-  controllers: [AuthorizationController, RevokeController, TokenController, LoginController],
+  controllers: [
+    AuthorizationController,
+    RevokeController,
+    ScopesController,
+    TokenController,
+    LoginController,
+  ],
   providers: [
     MyCustomJwtService.register("super-secret"),
     AuthorizationServerService.register({
@@ -25,7 +32,7 @@ import { csrf } from "../../lib/csrf.js";
 })
 export class OAuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(csrf.doubleCsrfProtection).forRoutes(LoginController);
+    consumer.apply(csrf.doubleCsrfProtection).forRoutes(LoginController, ScopesController);
     consumer.apply(CurrentUserMiddleware).forRoutes({
       path: "*",
       method: RequestMethod.ALL,

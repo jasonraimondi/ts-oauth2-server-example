@@ -1,4 +1,4 @@
-{% extends "auth/layouts/index.njk" %}
+{% extends "layouts/index.njk" %}
 
 {% block main %}
 <div>
@@ -15,7 +15,6 @@
         <li>
             <form action="{{ submitUrl | safe }}" method="POST">
                 <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-
                 <input name="accept" value="yes" type="hidden" style="display: none;">
                 <button>Yes</button>
             </form>

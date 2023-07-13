@@ -36,8 +36,6 @@ export class AuthorizationController {
       // Once the user has logged in set the user on the AuthorizationRequest
       authRequest.user = user;
 
-      console.log("BOOYA IT WORKED!!!");
-
       // @todo don't hardcode this value...
       authRequest.isAuthorizationApproved = true;
 
@@ -48,9 +46,8 @@ export class AuthorizationController {
       // If the user has not approved the client's authorization request,
       // the user should be redirected to the approval screen.
       if (!authRequest.isAuthorizationApproved) {
-        // This form will ask the user to approve the client and the scopes requested.
-        // "Do you authorize Jason to: read contacts? write contacts?"
-        res.redirect("/scopes");
+        const [_, params] = req.url.split("?");
+        res.status(302).redirect(`/api/scopes?${params}`);
         return;
       }
 

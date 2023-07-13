@@ -9,5 +9,5 @@ plugins: ["prettier-plugin-svelte"]
 pluginSearchDirs: ["."]
 overrides:
   - files: "*.svelte"
-	options:
-	  parser: "svelte
+    options:
+      parser: "svelte"
