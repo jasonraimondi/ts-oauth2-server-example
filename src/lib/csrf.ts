@@ -1,9 +1,8 @@
 import { doubleCsrf } from "csrf-csrf";
 
 export const csrf = doubleCsrf({
-  // @todo this should be a rotating key
   getSecret: _req => "my-other-super-secret-key",
-  cookie: {
+  cookieOptions: {
     httpOnly: true,
     // sameSite: "strict",
     path: "/",
