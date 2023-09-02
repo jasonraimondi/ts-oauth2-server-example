@@ -11,7 +11,6 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
 import { AppModule } from "./app.module.js";
-import { PrismaService } from "./app/prisma/prisma.service.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -21,9 +20,6 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
   app.use(cookieParser("my-secret"));
-
-  const prismaService = app.get(PrismaService);
-  await prismaService.enableShutdownHooks(app);
 
   const templatesDir = join(__dirname, "..", "views");
   nunjucks.configure(templatesDir, {
