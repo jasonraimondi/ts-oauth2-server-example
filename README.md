@@ -7,8 +7,13 @@ This is an example implementation of the [@jmondi/oauth2-server](https://github.
 You can use [Foreman](https://github.com/ddollar/foreman) or [Overmind](https://github.com/DarthSim/overmind) to manage these processes. Both tools allow running multiple applications specified in a Procfile simultaneously.
 
 ```
+cp -n .env.example .env
+pnpm install
+pnpm install --prefix web
+
 docker compose up -d
 pnpm db:migrate
 pnpm db:seed
+
 overmind start # or use foreman
 ```
