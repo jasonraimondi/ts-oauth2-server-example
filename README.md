@@ -7,7 +7,7 @@ This is an example implementation of the [@jmondi/oauth2-server](https://github.
 You can use [Foreman](https://github.com/ddollar/foreman) or [Overmind](https://github.com/DarthSim/overmind) to manage these processes. Both tools allow running multiple applications specified in a Procfile simultaneously.
 
 ```
-cp .env.example .env
+cp -n .env.example .env
 pnpm install
 cd web && pnpm install && cd ..
 
