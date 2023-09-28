@@ -3,7 +3,7 @@
   import { CALLBACK_URL, CLIENT_ID, createAuth } from "$lib/auth";
   import { SESSION_STORAGE } from "$lib/browser_storage";
 
-  const url = new URL("http://localhost:5173/api/oauth2/authorize");
+  const url = new URL("http://localhost:3000/api/oauth2/authorize");
 
   onMount(async () => {
     const { state, verifier, challenge } = await createAuth();

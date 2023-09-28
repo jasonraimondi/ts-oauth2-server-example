@@ -35,8 +35,9 @@ async function bootstrap() {
   );
   app.setGlobalPrefix("api");
 
+  app.enableCors();
   await app.listen(3000);
-
+  console.log(`Backend running: http://localhost:3000/`);
   console.log(`Sample Login: http://localhost:5173/`);
 }
 
