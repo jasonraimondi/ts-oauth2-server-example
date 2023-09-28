@@ -9,7 +9,7 @@ You can use [Foreman](https://github.com/ddollar/foreman) or [Overmind](https://
 ```
 cp -n .env.example .env
 pnpm install
-cd web && pnpm install && cd ..
+pnpm install --prefix web
 
 docker compose up -d
 pnpm db:migrate
