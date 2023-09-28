@@ -13,7 +13,7 @@ import { User } from "../entities/user.js";
 import { DateDuration } from "@jmondi/date-duration";
 
 export class TokenRepository implements OAuthTokenRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   async findById(accessToken: string): Promise<Token> {
     const token = await this.prisma.oAuthToken.findUnique({
@@ -64,9 +64,6 @@ export class TokenRepository implements OAuthTokenRepository {
   async issueRefreshToken(token: Token, _: OAuthClient): Promise<Token> {
     token.refreshToken = generateRandomToken();
     token.refreshTokenExpiresAt = new DateInterval("2h").getEndDate();
-    console.log(new DateDuration("2h"));
-    console.log(new DateDuration("2h").endDate);
-    console.log(token.refreshTokenExpiresAt);
     await this.prisma.oAuthToken.update({
       where: {
         accessToken: token.accessToken,
