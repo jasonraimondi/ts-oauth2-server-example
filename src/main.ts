@@ -11,11 +11,14 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
 import { AppModule } from "./app.module.js";
+import { LocalLogger } from "./logging/local-logger.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new LocalLogger("App"),
+  });
 
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
