@@ -6,7 +6,7 @@
     <p>Do you authorize this application {{ client.name }} the following scopes:</p>
     <ul>
         {% for scope in scopes %}
-            <li>{{ scope.description }}</li>
+            <li>{{ scope.name }}</li>
         {% else %}
             <li>No scopes! Fix this empty state</li>
         {% endfor %}

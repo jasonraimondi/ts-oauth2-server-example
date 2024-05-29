@@ -11,13 +11,9 @@ import {
 } from "@nestjs/common";
 import type { Response, Request } from "express";
 import { requestFromExpress } from "@jmondi/oauth2-server/express";
-import { User } from "@prisma/client";
-import { DateDuration } from "@jmondi/date-duration";
-import { IsEmail, IsString } from "class-validator";
 
 import { AuthorizationServerService } from "../services/authorization_server.service.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
-import { verifyPasswordOrThrow } from "../../../lib/password.js";
 import { MyCustomJwtService } from "../services/custom_jwt_service.js";
 
 export class ScopesBody {}
@@ -34,11 +30,9 @@ export class ScopesController {
   @Render("scopes")
   async index(@Req() req: Request, @Res() res: Response) {
     await this.oauth.validateAuthorizationRequest(requestFromExpress(req));
-
     return {
       csrfToken: req.csrfToken(),
-      loginFormAction: "#",
-      forgotPasswordLink: "#",
+      scopes: await this.prisma.oAuthScope.findMany(),
     };
   }
 
