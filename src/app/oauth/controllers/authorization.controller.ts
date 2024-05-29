@@ -36,12 +36,9 @@ export class AuthorizationController {
       // Once the user has logged in set the user on the AuthorizationRequest
       authRequest.user = user;
 
-      // @todo don't hardcode this value...
-      authRequest.isAuthorizationApproved = true;
-
       // Once the user has approved or denied the client update the status
       // (true = approved, false = denied)
-      // authRequest.isAuthorizationApproved = getIsAuthorizationApprovedFromSession();
+      authRequest.isAuthorizationApproved = req.cookies.accept === "yes";
 
       // If the user has not approved the client's authorization request,
       // the user should be redirected to the approval screen.
