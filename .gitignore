@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .env
+.plan-bender/
+.plan-bender.local.json
+.claude/skills/bender-*
