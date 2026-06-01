@@ -1,0 +1,43 @@
+{
+  "id": 12,
+  "slug": "sveltekit-check-docs-cleanup",
+  "name": "SvelteKit verification, docs, and dead-file cleanup",
+  "track": "experience",
+  "status": "backlog",
+  "priority": "medium",
+  "points": 3,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    13
+  ],
+  "blocking": [],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": false,
+  "headed": true,
+  "outcome": "The rewritten server is verified end-to-end against the SvelteKit client, dead NestJS/Prisma files are removed, and docs reflect the Hono + Drizzle stack.",
+  "scope": "manual web verification, dead-file/dependency cleanup, README + CLAUDE.md updates.",
+  "acceptance_criteria": [
+    "The SvelteKit client completes login -\u003e authorize -\u003e callback against the rewritten server on port 3000",
+    "No @nestjs/*, @prisma/client, express, nunjucks, csrf-csrf, reflect-metadata, rxjs, class-validator/transformer remain; prisma/, src/logging/, src/main.ts, src/app.module.ts, old controllers/services, src/global.d.ts, and views/ are deleted",
+    "pnpm build (tsc) passes cleanly",
+    "README and CLAUDE.md describe the Hono + Drizzle stack and commands"
+  ],
+  "steps": [
+    "Run web/ against the server and verify the login -\u003e /callback round trip in a browser (tooling-agent-browser)",
+    "Delete dead files: prisma/, src/logging/, src/main.ts, src/app.module.ts, src/app.controller.ts, src/app/prisma/, the old oauth controllers/services, src/global.d.ts, and any remaining nunjucks views",
+    "Remove now-unused deps from package.json",
+    "tsconfig.json — remove the `./src/global.d.ts` entry from compilerOptions.types and drop the stale `prisma/**/*.ts` glob from include (prisma/ is deleted); then run pnpm build (tsc) and fix any residual type errors",
+    "README.md and CLAUDE.md — update setup/scripts (cp .env.example .env, tsx, drizzle-kit, vitest) and the stack description"
+  ],
+  "use_cases": [
+    "UC-4"
+  ],
+  "notes": "Final integration + cleanup slice; the dependency chain ends here. Keep seed IDs, /api routes, and port 3000 intact so the SvelteKit client keeps working."
+}

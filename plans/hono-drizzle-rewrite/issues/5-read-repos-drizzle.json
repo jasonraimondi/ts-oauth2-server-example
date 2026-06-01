@@ -1,0 +1,46 @@
+{
+  "id": 5,
+  "slug": "read-repos-drizzle",
+  "name": "Read repositories on Drizzle",
+  "track": "data",
+  "status": "backlog",
+  "priority": "high",
+  "points": 2,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    3,
+    4,
+    14
+  ],
+  "blocking": [
+    6
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": true,
+  "headed": false,
+  "outcome": "Client, scope, and user repositories read from Drizzle, returning entities with their scopes, preserving the @jmondi interfaces.",
+  "scope": "client_repository, scope_repository, user_repository on Drizzle. Persist-side repos are a separate slice.",
+  "acceptance_criteria": [
+    "ClientRepository.getByIdentifier returns a client with its linked scopes loaded",
+    "ScopeRepository.getAllByIdentifiers returns matching scopes and finalize returns them verbatim",
+    "UserRepository.getUserByCredentials returns the User entity and verifies the password when supplied; no @prisma/client imports remain"
+  ],
+  "steps": [
+    "src/app/oauth/repositories/client_repository.ts — getByIdentifier via db.query.oauthClients with { scopes }; reimplement isClientValid preserving the allowedGrants check",
+    "src/app/oauth/repositories/scope_repository.ts — getAllByIdentifiers via a Drizzle select where name in scopeNames; finalize returns scopes verbatim",
+    "src/app/oauth/repositories/user_repository.ts — getUserByCredentials via Drizzle select by id, calling verifyPasswordOrThrow when a password is supplied",
+    "tests — repo tests asserting client scopes load via the join and getAllByIdentifiers filters by name"
+  ],
+  "use_cases": [
+    "UC-2",
+    "UC-5"
+  ],
+  "notes": "Read-mostly repos; the seed provides their data. Keep @jmondi method names/signatures intact (getByIdentifier, isClientValid, getAllByIdentifiers, finalize, getUserByCredentials)."
+}

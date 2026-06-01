@@ -1,0 +1,44 @@
+{
+  "id": 14,
+  "slug": "vitest-test-db-harness",
+  "name": "Vitest test-DB harness",
+  "track": "intent",
+  "status": "backlog",
+  "priority": "high",
+  "points": 2,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    3
+  ],
+  "blocking": [
+    5
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": false,
+  "headed": false,
+  "outcome": "A Vitest + dedicated test-database harness (config, .env.test, globalSetup migrate+seed, between-test truncation) exists so every test-first slice can run against oauth_test.",
+  "scope": "vitest.config.ts, tests/.env.test, tests/setup globalSetup + truncation, and a smoke test proving the harness. The actual flow/repo/negative specs live in their own slices.",
+  "acceptance_criteria": [
+    "pnpm test (vitest) boots against oauth_test via tests/.env.test",
+    "globalSetup creates oauth_test if absent, runs the drizzle migration, and seeds it once",
+    "Between-test truncation clears oauthTokens, oauthAuthCodes, oauthTokenScopes, oauthAuthCodeScopes while keeping seeded users/clients/scopes/oauthClientScopes"
+  ],
+  "steps": [
+    "vitest.config.ts — load tests/.env.test and set globalSetup; package.json test script -> vitest",
+    "tests/.env.test — define DATABASE_URL (a dedicated oauth_test database) and JWT_SECRET",
+    "tests/setup/global-setup.ts — create oauth_test if absent (createdb / CREATE DATABASE; docker-compose is out of scope), then run the drizzle migration + seed once",
+    "tests/setup — truncate oauthTokens, oauthAuthCodes, oauthTokenScopes, oauthAuthCodeScopes between tests; keep seeded users/clients/scopes/oauthClientScopes",
+    "tests/harness.test.ts — a smoke test (query a seeded scope, or GET /api/ping via app.request) confirming the harness migrates+seeds and truncation resets dynamic state between tests — verify it passes"
+  ],
+  "use_cases": [
+    "UC-8"
+  ],
+  "notes": "Extracted from the integration-flow slice during PRD review so the test-first slices (read-repos 5, persist-repos 6, token/revoke 8, authorize 9) have a harness to run against. Numbered 14 for append-only id stability, but it executes EARLY: blocked_by 3 (seed) and blocking 5 (read-repos), so the whole 5 -> 11 chain consumes it through the dependency graph (the one backward-numbered dep, 5 -> 14, is intentional). Reused unchanged by the integration-flow (11) and resilience (13) slices."
+}

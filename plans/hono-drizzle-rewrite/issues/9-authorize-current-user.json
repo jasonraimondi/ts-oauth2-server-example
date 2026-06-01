@@ -1,0 +1,45 @@
+{
+  "id": 9,
+  "slug": "authorize-current-user",
+  "name": "Authorize endpoint and currentUser middleware",
+  "track": "rules",
+  "status": "backlog",
+  "priority": "high",
+  "points": 3,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    7
+  ],
+  "blocking": [
+    10,
+    11
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": true,
+  "headed": false,
+  "outcome": "GET /api/oauth2/authorize validates the request, redirects unauthenticated users to login, and completes approved requests; a currentUser middleware attaches the user from the jid cookie.",
+  "scope": "authorize route handler + currentUser Hono middleware; preserves the hardcoded approval.",
+  "acceptance_criteria": [
+    "GET /api/oauth2/authorize with no session returns 302 to /api/login carrying the original query string",
+    "With a valid jid cookie, the request completes and redirects to redirect_uri with code and state",
+    "currentUser verifies the jid JWT, loads the user, and sets it on the Hono context; missing/invalid tokens pass through without a user"
+  ],
+  "steps": [
+    "src/app/oauth/current_user.ts — Hono middleware: read jid via getCookie, verify with the JWT service, load the user via UserRepository, c.set('user', user) on success; on missing/invalid token, await next() without setting a user",
+    "src/index.ts — type Hono Variables with { user?: User } and apply currentUser, replacing the express Request augmentation in src/global.d.ts",
+    "routes — GET /api/oauth2/authorize: build the OAuthRequest from c.req.raw, call validateAuthorizationRequest; if no c.get('user'), 302 redirect to /api/login with the params",
+    "routes — set authRequest.user = user and authRequest.isAuthorizationApproved = true (preserve the @todo), call completeAuthorizationRequest, return responseToVanilla"
+  ],
+  "use_cases": [
+    "UC-2",
+    "UC-4"
+  ],
+  "notes": "Preserve the hardcoded isAuthorizationApproved=true and the redirect-to-/api/login-when-no-user behavior. Replaces CurrentUserMiddleware and the express Request augmentation in src/global.d.ts (deleted in cleanup)."
+}

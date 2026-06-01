@@ -1,0 +1,48 @@
+{
+  "id": 13,
+  "slug": "resilience-negative-paths",
+  "name": "Resilience: OAuth error and CSRF negative paths",
+  "track": "resilience",
+  "status": "backlog",
+  "priority": "medium",
+  "points": 2,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    11
+  ],
+  "blocking": [
+    12
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": true,
+  "headed": false,
+  "outcome": "Failure paths return correct OAuth error responses and cross-origin form POSTs are rejected, proving the vanilla-bridge error mapping and origin-based CSRF.",
+  "scope": "Negative-path Vitest tests reusing the slice-14 test-DB harness: OAuthException error-response mapping, bad client secret, expired auth code, revoked/expired refresh token, and hono/csrf rejection. No new test infra.",
+  "acceptance_criteria": [
+    "POST /api/oauth2/token with a bad client secret returns the correct OAuth error status/body, not an unhandled 500",
+    "An expired authorization code and a revoked/expired refresh token are each rejected at POST /api/oauth2/token with the correct OAuth error",
+    "A cross-origin form POST to /api/login (mismatched Origin header) is rejected by hono/csrf, while a same-origin POST is accepted",
+    "POST /api/oauth2/token and /api/oauth2/revoke with NO Origin header (machine-to-machine) are NOT rejected by hono/csrf, proving CSRF is scoped to the form routes only",
+    "An OAuthException thrown in the token/revoke handlers maps to its OAuth error response via the vanilla bridge"
+  ],
+  "steps": [
+    "tests/resilience.test.ts — POST /api/oauth2/token with a bad client secret returns the OAuthException error status/body (assert via app.request)",
+    "tests/resilience.test.ts — persist an auth code with a past expiresAt and assert the token exchange rejects it with the correct OAuth error",
+    "tests/resilience.test.ts — assert a revoked/expired refresh token is rejected by the refresh_token grant with the correct OAuth error",
+    "tests/resilience.test.ts — assert a cross-origin POST /api/login (mismatched Origin header) is rejected by hono/csrf and a matching-Origin POST passes",
+    "tests/resilience.test.ts — assert POST /api/oauth2/token and /api/oauth2/revoke with no Origin header are NOT blocked by hono/csrf (the requests reach the handler), proving CSRF is scoped to the login/scopes form routes and never the machine-to-machine token/revoke routes",
+    "tests/resilience.test.ts — assert OAuthException maps to its status + error body for both token and revoke through the vanilla bridge"
+  ],
+  "use_cases": [
+    "UC-5",
+    "UC-7"
+  ],
+  "notes": "Reuses the slice-14 Vitest harness (vitest.config, tests/.env.test, globalSetup, between-test truncation); adds no new infra. Mirrors the OAuthException mapping the old token/revoke controllers did with handleExpressError. hono/csrf is origin-based and scoped to the form routes (login/scopes) only."
+}

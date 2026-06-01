@@ -1,0 +1,46 @@
+{
+  "id": 7,
+  "slug": "container-auth-server-jwt",
+  "name": "Container, AuthorizationServer, and custom JWT",
+  "track": "intent",
+  "status": "backlog",
+  "priority": "high",
+  "points": 2,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    6
+  ],
+  "blocking": [
+    8,
+    9
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": false,
+  "headed": false,
+  "outcome": "A container wires Drizzle, the five repos, the custom JWT service, and a configured AuthorizationServer with authorization_code + refresh_token enabled.",
+  "scope": "src/container.ts and the custom JWT service; no HTTP routes yet.",
+  "acceptance_criteria": [
+    "container builds new AuthorizationServer(clientRepo, tokenRepo, scopeRepo, jwt, { requiresPKCE: true, requiresS256: true })",
+    "enableGrantTypes registers refresh_token and authorization_code (with authCodeRepository + userRepository) at 1h intervals, matching current behavior",
+    "MyCustomJwtService.extraTokenFields adds email and client name"
+  ],
+  "steps": [
+    "src/app/oauth/services/custom_jwt_service.ts — port MyCustomJwtService extending JwtService with extraTokenFields returning { email, client }; drop the Nest @Injectable and register factory",
+    ".env + .env.example — add JWT_SECRET (replacing the hardcoded 'super-secret' from oauth.module.ts:24); the new code reads it from process.env. NOTE .env and .env.example already exist with DATABASE_URL — extend both with JWT_SECRET rather than recreating them",
+    "src/container.ts — construct the postgres.js-backed Drizzle db, the five Drizzle repos, and MyCustomJwtService from process.env.JWT_SECRET",
+    "src/container.ts — build new AuthorizationServer(clientRepo, tokenRepo, scopeRepo, jwt, { requiresPKCE: true, requiresS256: true }) and call enableGrantTypes(['refresh_token', 1h], [{ grant: 'authorization_code', authCodeRepository, userRepository }, 1h])",
+    "src/container.ts — export the built server, db, and repos for route handlers and tests"
+  ],
+  "use_cases": [
+    "UC-5",
+    "UC-6"
+  ],
+  "notes": "Replaces authorization_server.service.ts (no more extends/Nest factory). Plain AuthorizationServer, not a subclass. Old service files removed in cleanup."
+}

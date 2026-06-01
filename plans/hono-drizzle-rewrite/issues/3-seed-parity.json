@@ -1,0 +1,45 @@
+{
+  "id": 3,
+  "slug": "seed-parity",
+  "name": "Seed parity with client-scope links",
+  "track": "data",
+  "status": "backlog",
+  "priority": "high",
+  "points": 2,
+  "labels": [
+    "AFK"
+  ],
+  "assignee": null,
+  "blocked_by": [
+    2
+  ],
+  "blocking": [
+    5,
+    14
+  ],
+  "branch": null,
+  "pr": null,
+  "linear_id": null,
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "tdd": false,
+  "headed": false,
+  "outcome": "A Drizzle seed reproduces the exact users, client, and scopes the SvelteKit client depends on, and links the client to its scopes (fixing the original seed bug).",
+  "scope": "src/db/seed.ts and the db:seed script. Read-path repos consume this in a later slice.",
+  "acceptance_criteria": [
+    "pnpm db:seed inserts user jason@example.com (id dd74961a-c348-4471-98a5-19fc3c5b5079) with a bcrypt hash of password123 and createdIP 127.0.0.1",
+    "Client 'Sample Client' (id 0e2ec2df-ee53-4327-a472-9d78c278bdbb) exists with redirect http://localhost:5173/callback and grants authorization_code/client_credentials/refresh_token",
+    "Scopes contacts.read (id c3d49dba-53c8-4d08-970f-9c567414732e) and contacts.write (id 22861a6c-dd8d-47b3-be1f-a3e7b67943bc) exist and are linked to the client via oauthClientScopes"
+  ],
+  "steps": [
+    "src/db/seed.ts — upsert the user with the exact id and a bcryptjs hash of password123, preserving createdIP",
+    "src/db/seed.ts — upsert 'Sample Client' with the exact id, redirectUris [http://localhost:5173/callback], allowedGrants [authorization_code, client_credentials, refresh_token]",
+    "src/db/seed.ts — upsert scopes contacts.read and contacts.write with their exact ids, then insert oauthClientScopes rows linking the client to both scopes",
+    "package.json — set db:seed to 'tsx src/db/seed.ts'"
+  ],
+  "use_cases": [
+    "UC-3",
+    "UC-5"
+  ],
+  "notes": "Exact IDs/values must match prisma/seed.ts so web/src/lib/auth.ts keeps working. The original seed created scopes but never linked them to the client; this slice fixes that per ADR-0001."
+}
