@@ -22,17 +22,18 @@
   "tdd": false,
   "headed": false,
   "outcome": "The server boots on Hono via @hono/node-server on port 3000 and answers GET /api/ping, with NestJS/Express tooling removed.",
-  "scope": "Dependency + tooling swap and the new composition entrypoint with a single ping route. No OAuth, DB, or views yet.",
+  "scope": "Dependency + tooling swap, modernizing the root tsconfig.json + package.json to ESNext + strict ESM, and the new composition entrypoint with a single ping route. No OAuth, DB, or views yet.",
   "acceptance_criteria": [
     "pnpm dev starts the server on port 3000 via tsx watch",
     "GET /api/ping returns 200",
-    "No @nestjs/*, express, body-parser, cookie-parser, or nodemon remain in package.json"
+    "No @nestjs/*, express, body-parser, cookie-parser, or nodemon remain in package.json",
+    "tsconfig.json sets strict:true, verbatimModuleSyntax, isolatedModules, moduleDetection 'force', and lib [ESNext], with target ESNext + module/moduleResolution NodeNext retained"
   ],
   "steps": [
-    "package.json — remove @nestjs/*, @prisma/client, prisma, express, body-parser, cookie-parser, csrf-csrf, nunjucks, reflect-metadata, rxjs, class-validator, class-transformer and their @types; add hono, @hono/node-server, @hono/zod-validator, zod, drizzle-orm, drizzle-kit, postgres, tsx, vitest",
+    "package.json — remove @nestjs/*, @prisma/client, prisma, express, body-parser, cookie-parser, csrf-csrf, nunjucks, reflect-metadata, rxjs, class-validator, class-transformer, ts-node and their @types; add (at latest) hono, @hono/node-server, @hono/zod-validator, zod, drizzle-orm, drizzle-kit, postgres, tsx, vitest; keep type:module, bump @types/node to the current LTS, and add an engines.node floor (>=22)",
     "package.json scripts — set dev to 'tsx watch src/index.ts' and build to 'tsc'; remove the nodemon dev script (db:* scripts are wired in later slices)",
     "Delete nodemon.json",
-    "tsconfig.json — drop experimentalDecorators/emitDecoratorMetadata; add jsx: react-jsx and jsxImportSource: hono/jsx; remove the `csrf-csrf` entry from compilerOptions.types (its dep is removed in this slice). The `./src/global.d.ts` entry in types and the `prisma/**/*.ts` include glob are pruned in the cleanup slice when those files are deleted",
+    "tsconfig.json — modernize to ESNext + strict: keep target ESNext and module/moduleResolution NodeNext (Node ESM, NOT bundler); add lib [ESNext], strict, verbatimModuleSyntax, isolatedModules, moduleDetection 'force', resolveJsonModule, skipLibCheck; drop experimentalDecorators/emitDecoratorMetadata; add jsx 'react-jsx' + jsxImportSource 'hono/jsx'; remove the `csrf-csrf` entry from compilerOptions.types (its dep is removed in this slice). The `./src/global.d.ts` entry in types and the `prisma/**/*.ts` include glob are pruned in the cleanup slice when those files are deleted",
     "pnpm-workspace.yaml — prune the stale allowBuilds entries (@nestjs/core, @prisma/*, swc, prisma); add esbuild only if pnpm flags tsx's build script",
     "src/index.ts — create a Hono app, mount hono/logger, add GET /api/ping returning 200, and serve via @hono/node-server on port 3000"
   ],

@@ -39,5 +39,5 @@
   "use_cases": [
     "UC-4"
   ],
-  "notes": "Final integration + cleanup slice; the dependency chain ends here. Keep seed IDs, /api routes, and port 3000 intact so the SvelteKit client keeps working."
+  "notes": "Final integration + cleanup slice; the dependency chain ends here. Keep seed IDs, /api routes, and port 3000 intact so the SvelteKit client keeps working. pnpm build (tsc) must pass under the modernized strict tsconfig from issue 1 (strict + verbatimModuleSyntax), so all new code is strict-clean and uses import type for type-only imports."
 }

@@ -15,7 +15,8 @@
     "CSRF swap: csrf-csrf double-submit -\u003e hono/csrf origin-based",
     "Fix scope persistence via three explicit join tables and a fixed seed",
     "Add a Vitest integration test suite against a dedicated test database",
-    "Update tooling (package.json, tsconfig, scripts), README, and CLAUDE.md"
+    "Update tooling (package.json, tsconfig, scripts), README, and CLAUDE.md",
+    "Modernize the root tsconfig.json + package.json to ESNext + strict ESM (NodeNext modules retained; web/ untouched)"
   ],
   "out_of_scope": [
     "The SvelteKit web/ client (untouched)",
@@ -73,7 +74,8 @@
     "JWT signing secret moves to a JWT_SECRET env var (added to .env, .env.example, and tests/.env.test), replacing the hardcoded 'super-secret' in the old oauth.module.ts; MyCustomJwtService is constructed from process.env.JWT_SECRET and the currentUser middleware verifies with the same service. The existing .env.example (DATABASE_URL) is extended with JWT_SECRET",
     "Resilience negative paths (OAuthException mapping, bad secret, expired code, revoked refresh, CSRF reject) live in a dedicated resilience slice that reuses the Vitest test-DB harness, rather than being folded into the integration flow slice",
     "The Vitest + test-DB harness (vitest.config, tests/.env.test, globalSetup migrate+seed, between-test truncation) is its own slice upstream of the test-first repo/endpoint slices, so they have a harness to run against; the integration-flow and resilience slices reuse it unchanged",
-    "OAuth error mapping is hand-rolled in the route handlers: the vanilla adapter ships no handleExpressError equivalent, so OAuthException is caught and mapped to a Fetch response mirroring handleExpressError's body ({ status, message, error: errorType, error_description })"
+    "OAuth error mapping is hand-rolled in the route handlers: the vanilla adapter ships no handleExpressError equivalent, so OAuthException is caught and mapped to a Fetch response mirroring handleExpressError's body ({ status, message, error: errorType, error_description })",
+    "The root server tsconfig is modernized to ESNext + strict in issue 1: strict, verbatimModuleSyntax, isolatedModules, moduleDetection 'force', resolveJsonModule, skipLibCheck, lib [ESNext] - keeping target ESNext and module/moduleResolution NodeNext (correct for a Node/tsx server, NOT bundler). package.json keeps type:module, bumps @types/node, and adds an engines.node floor. web/ stays untouched (SvelteKit-managed, already strict). Cross-cutting: verbatimModuleSyntax forces `import type` for all type-only imports across the new code, and every slice must compile strict-clean - enforced when pnpm build (tsc) goes green in the cleanup slice (12)"
   ],
   "risks": [
     "Persisting scopes and linking the seed are behavior changes vs the old example; flow tests must assert the new scope round-trip and refresh narrowing",
