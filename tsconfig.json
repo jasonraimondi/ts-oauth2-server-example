@@ -4,17 +4,28 @@
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "moduleDetection": "force",
 
-    /* Advanced Options */
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    /* Strictness */
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    /* Interop */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+
+    /* JSX (Hono) */
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
 
     /* Output Options */
     "removeComments": true,
     "sourceMap": true,
-    "types": ["./src/global.d.ts", "csrf-csrf"]
+    "types": ["./src/global.d.ts"]
   },
   "include": ["src/**/*.ts", "prisma/**/*.ts"]
 }

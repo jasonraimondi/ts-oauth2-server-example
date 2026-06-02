@@ -3,7 +3,7 @@
   "slug": "tooling-hono-entrypoint",
   "name": "Tooling swap and Hono entrypoint",
   "track": "intent",
-  "status": "todo",
+  "status": "in-review",
   "priority": "high",
   "points": 3,
   "labels": [
@@ -14,11 +14,11 @@
   "blocking": [
     2
   ],
-  "branch": null,
+  "branch": "jason/hono-drizzle-rewrite--1-tooling-hono-entrypoint",
   "pr": null,
   "linear_id": null,
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-05",
   "tdd": false,
   "headed": false,
   "outcome": "The server boots on Hono via @hono/node-server on port 3000 and answers GET /api/ping, with NestJS/Express tooling removed.",
@@ -30,7 +30,7 @@
     "tsconfig.json sets strict:true, verbatimModuleSyntax, isolatedModules, moduleDetection 'force', and lib [ESNext], with target ESNext + module/moduleResolution NodeNext retained"
   ],
   "steps": [
-    "package.json — remove @nestjs/*, @prisma/client, prisma, express, body-parser, cookie-parser, csrf-csrf, nunjucks, reflect-metadata, rxjs, class-validator, class-transformer, ts-node and their @types; add (at latest) hono, @hono/node-server, @hono/zod-validator, zod, drizzle-orm, drizzle-kit, postgres, tsx, vitest; keep type:module, bump @types/node to the current LTS, and add an engines.node floor (>=22)",
+    "package.json — remove @nestjs/*, @prisma/client, prisma, express, body-parser, cookie-parser, csrf-csrf, nunjucks, reflect-metadata, rxjs, class-validator, class-transformer, ts-node and their @types; add (at latest) hono, @hono/node-server, @hono/zod-validator, zod, drizzle-orm, drizzle-kit, postgres, tsx, vitest; keep type:module, bump @types/node to the current LTS, and add an engines.node floor (\u003e=22)",
     "package.json scripts — set dev to 'tsx watch src/index.ts' and build to 'tsc'; remove the nodemon dev script (db:* scripts are wired in later slices)",
     "Delete nodemon.json",
     "tsconfig.json — modernize to ESNext + strict: keep target ESNext and module/moduleResolution NodeNext (Node ESM, NOT bundler); add lib [ESNext], strict, verbatimModuleSyntax, isolatedModules, moduleDetection 'force', resolveJsonModule, skipLibCheck; drop experimentalDecorators/emitDecoratorMetadata; add jsx 'react-jsx' + jsxImportSource 'hono/jsx'; remove the `csrf-csrf` entry from compilerOptions.types (its dep is removed in this slice). The `./src/global.d.ts` entry in types and the `prisma/**/*.ts` include glob are pruned in the cleanup slice when those files are deleted",
@@ -40,5 +40,5 @@
   "use_cases": [
     "UC-1"
   ],
-  "notes": "Old NestJS files (src/main.ts, modules, controllers) stay on disk until the cleanup slice; tsx runs only src/index.ts so it does not import them. pnpm build (tsc) will not fully pass until cleanup."
+  "notes": "Old NestJS files (src/main.ts, modules, controllers) stay on disk until the cleanup slice; tsx runs only src/index.ts so it does not import them. pnpm build (tsc) will not fully pass until cleanup.\n[2026-06-02 11:15] todo→in-progress: dispatch worktree\n[2026-06-02 11:24] in-progress→blocked: subprocess exited 0 but issue status is in-progress, expected in-review\n[2026-06-02 11:30] blocked→todo: retry\n[2026-06-02 11:30] todo→in-progress: dispatch worktree\n[2026-06-02 11:34] in-progress→blocked: subprocess exited 0 but issue status is in-progress, expected in-review\n[2026-06-02 11:44] blocked→todo: retry\n[2026-06-02 11:44] todo→in-progress: dispatch worktree\n[2026-06-02 11:46] in-progress→blocked: subprocess exited 0 but issue status is in-progress, expected in-review\n[2026-06-05 23:17] blocked→todo: retry"
 }
