@@ -6,6 +6,7 @@ type UserModel = typeof users.$inferSelect;
 export class User implements UserModel, OAuthUser {
   readonly id: string;
   email: string;
+  name: string | null;
   passwordHash: string | null;
   tokenVersion = 0;
   lastLoginAt: Date | null;
@@ -17,6 +18,7 @@ export class User implements UserModel, OAuthUser {
   constructor(entity: UserModel) {
     this.id = entity.id;
     this.email = entity.email;
+    this.name = entity.name;
     this.passwordHash = entity.passwordHash;
     this.tokenVersion = entity.tokenVersion;
     this.lastLoginAt = entity.lastLoginAt;

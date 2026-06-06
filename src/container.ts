@@ -9,6 +9,7 @@ import { UserRepository } from "./app/oauth/repositories/user_repository.js";
 import { AuthCodeRepository } from "./app/oauth/repositories/auth_code_repository.js";
 import { TokenRepository } from "./app/oauth/repositories/token_repository.js";
 import { MyCustomJwtService } from "./app/oauth/services/custom_jwt_service.js";
+import { resolvePrivateKey } from "./lib/oidc_key.js";
 
 const clientRepository = new ClientRepository(db);
 const scopeRepository = new ScopeRepository(db);
@@ -16,16 +17,31 @@ const userRepository = new UserRepository(db);
 const authCodeRepository = new AuthCodeRepository(db);
 const tokenRepository = new TokenRepository(db);
 
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) throw new Error("JWT_SECRET environment variable is required");
-const jwt = new MyCustomJwtService(jwtSecret);
+const issuer = process.env.OIDC_ISSUER ?? "http://localhost:3000";
+const jwt = new MyCustomJwtService({ key: resolvePrivateKey() });
 
 const authorizationServer = new AuthorizationServer(
   clientRepository,
   tokenRepository,
   scopeRepository,
   jwt,
-  { requiresPKCE: true, requiresS256: true },
+  {
+    requiresPKCE: true,
+    requiresS256: true,
+    issuer,
+    oidc: {
+      authorizationEndpoint: `${issuer}/api/oauth2/authorize`,
+      tokenEndpoint: `${issuer}/api/oauth2/token`,
+      userinfoEndpoint: `${issuer}/api/oauth2/userinfo`,
+      jwksUri: `${issuer}/.well-known/jwks.json`,
+      // Return only attributes we actually store; the library filters them by the
+      // granted scopes (email -> email, profile -> name) before serving /userinfo.
+      getUserClaims: async (subject) => {
+        const user = await userRepository.getUserByCredentials(subject);
+        return { sub: subject, email: user.email, name: user.name ?? undefined };
+      },
+    },
+  },
 );
 
 authorizationServer.enableGrantTypes(

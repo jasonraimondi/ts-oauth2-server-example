@@ -27,6 +27,7 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: varchar("email", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }),
     passwordHash: varchar("passwordHash", { length: 255 }),
     tokenVersion: integer("tokenVersion").notNull().default(0),
     lastLoginAt: timestamp("lastLoginAt", { precision: 6 }),
@@ -64,6 +65,9 @@ export const oauthAuthCodes = pgTable("oauthAuthCodes", {
   redirectUri: text("redirectUri"),
   codeChallenge: text("codeChallenge"),
   codeChallengeMethod: codeChallengeMethod("codeChallengeMethod").notNull().default("plain"),
+  nonce: text("nonce"),
+  authTime: integer("authTime"),
+  maxAge: integer("maxAge"),
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt"),

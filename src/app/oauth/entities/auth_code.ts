@@ -23,6 +23,9 @@ export class AuthCode implements AuthCodeModel, OAuthAuthCode {
   readonly code: string;
   codeChallenge: string | null;
   codeChallengeMethod: CodeChallengeMethod;
+  nonce: string | null;
+  authTime: number | null;
+  maxAge: number | null;
   redirectUri: string | null;
   user: User | null;
   userId: string | null;
@@ -37,6 +40,9 @@ export class AuthCode implements AuthCodeModel, OAuthAuthCode {
     this.code = entity.code;
     this.codeChallenge = entity.codeChallenge;
     this.codeChallengeMethod = entity.codeChallengeMethod;
+    this.nonce = entity.nonce;
+    this.authTime = entity.authTime;
+    this.maxAge = entity.maxAge;
     this.redirectUri = entity.redirectUri;
     this.user = user ? new User(user) : null;
     this.userId = entity.userId;

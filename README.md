@@ -12,13 +12,23 @@ This is an example implementation of the [@jmondi/oauth2-server](https://github.
 
 The OAuth2 HTTP endpoints bridge Hono's Fetch `Request`/`Response` to the package via the `@jmondi/oauth2-server/vanilla` adapter.
 
+## OpenID Connect
+
+OIDC is enabled on the authorization-code flow. Requesting the `openid` scope adds an `id_token` (RS256) to the token response, and the server exposes:
+
+- `GET /.well-known/openid-configuration` — discovery document
+- `GET /.well-known/jwks.json` — public signing key (JWKS)
+- `GET|POST /api/oauth2/userinfo` — bearer-authenticated, scope-filtered claims
+
+Tokens are signed with an RSA key from `OIDC_PRIVATE_KEY` (or an ephemeral key generated at boot if unset). The seeded **OIDC Demo Client** is granted the `openid`, `email`, and `profile` scopes.
+
 ## Getting Started
 
 You can use [Foreman](https://github.com/ddollar/foreman) or [Overmind](https://github.com/DarthSim/overmind) to manage these processes. Both tools allow running multiple applications specified in a Procfile simultaneously.
 
 ```
 cp -n .env.example .env
-# then set DATABASE_URL and JWT_SECRET in .env
+# then set DATABASE_URL in .env (OIDC_ISSUER/OIDC_PRIVATE_KEY are optional — see .env.example)
 
 pnpm install
 pnpm install --prefix web

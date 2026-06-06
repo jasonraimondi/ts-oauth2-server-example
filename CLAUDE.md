@@ -46,7 +46,8 @@ overmind start  # or foreman start
 - User authentication and management
 - Client registration and management
 - Scope-based authorization
-- JWT token handling
+- JWT token handling (RS256 asymmetric signing)
+- OpenID Connect: `id_token` on the code flow, plus discovery, JWKS, and userinfo endpoints
 - Hono JSX server-rendered login/scopes forms
 - zod request validation
 - Origin-based CSRF protection (`hono/csrf`) scoped to the browser form routes
@@ -61,5 +62,6 @@ overmind start  # or foreman start
 - Server runs on port 3000 with all routes under the `/api` prefix
 - Web client runs separately via SvelteKit
 - Uses ESM modules (`"type": "module"`)
-- JWT signing key supplied via `JWT_SECRET`
+- OIDC tokens are signed with an RSA key from `OIDC_PRIVATE_KEY` (PEM); if unset, an ephemeral key is generated at boot
+- OIDC issuer set via `OIDC_ISSUER` (defaults to `http://localhost:3000`); discovery + JWKS live at `/.well-known/*`, userinfo at `/api/oauth2/userinfo`
 - CSRF protection enabled on the browser form routes

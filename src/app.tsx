@@ -69,6 +69,25 @@ app.post("/api/oauth2/revoke", async (c) => {
   }
 });
 
+// OIDC discovery + JWKS live at the issuer root so a relying party can find them
+// at `${issuer}/.well-known/...`. Both are public and unauthenticated.
+app.get("/.well-known/openid-configuration", () =>
+  responseToVanilla(authorizationServer.openidConfiguration()),
+);
+
+app.get("/.well-known/jwks.json", () => responseToVanilla(authorizationServer.jwks()));
+
+// OIDC userinfo: bearer-authenticated, returns scope-filtered claims (RFC 6750
+// errors on a missing/invalid token). Accepts the token via header, form, or query.
+app.on(["GET", "POST"], "/api/oauth2/userinfo", async (c) => {
+  try {
+    const oauthReq = await requestFromVanilla(c.req.raw);
+    return responseToVanilla(await authorizationServer.userInfo(oauthReq));
+  } catch (e) {
+    return oauthErrorResponse(c, e);
+  }
+});
+
 app.get("/api/oauth2/authorize", async (c) => {
   try {
     const authRequest = await authorizationServer.validateAuthorizationRequest(
@@ -81,6 +100,11 @@ app.get("/api/oauth2/authorize", async (c) => {
     }
     authRequest.user = user;
     authRequest.isAuthorizationApproved = true; // @todo don't hardcode this value
+    // OIDC auth_time: when the end-user last authenticated. Falls back to now for
+    // pre-existing sessions that predate a recorded login.
+    authRequest.authTime = user.lastLoginAt
+      ? Math.floor(user.lastLoginAt.getTime() / 1000)
+      : Math.floor(Date.now() / 1000);
     return responseToVanilla(await authorizationServer.completeAuthorizationRequest(authRequest));
   } catch (e) {
     return oauthErrorResponse(c, e);
