@@ -1,5 +1,7 @@
-import { User as UserModel } from "@prisma/client";
-import { OAuthUser } from "@jmondi/oauth2-server";
+import { users } from "../../../db/schema.js";
+import type { OAuthUser } from "@jmondi/oauth2-server";
+
+type UserModel = typeof users.$inferSelect;
 
 export class User implements UserModel, OAuthUser {
   readonly id: string;
