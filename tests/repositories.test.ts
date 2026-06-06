@@ -1,8 +1,12 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { db } from "../src/db/index.js";
+import { oauthAuthCodeScopes, oauthTokenScopes } from "../src/db/schema.js";
+import { AuthCodeRepository } from "../src/app/oauth/repositories/auth_code_repository.js";
 import { ClientRepository } from "../src/app/oauth/repositories/client_repository.js";
 import { ScopeRepository } from "../src/app/oauth/repositories/scope_repository.js";
+import { TokenRepository } from "../src/app/oauth/repositories/token_repository.js";
 import { UserRepository } from "../src/app/oauth/repositories/user_repository.js";
 
 const SEEDED_CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
@@ -65,5 +69,98 @@ describe("UserRepository", () => {
   it("getUserByCredentials returns the user when no password is supplied", async () => {
     const user = await repository.getUserByCredentials(SEEDED_USER_ID);
     expect(user.email).toBe("jason@example.com");
+  });
+});
+
+describe("AuthCodeRepository", () => {
+  const repository = new AuthCodeRepository(db);
+  const clientRepository = new ClientRepository(db);
+
+  it("persist writes the auth code and both scope links in one transaction", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    expect(client.scopes).toHaveLength(2);
+
+    const authCode = repository.issueAuthCode(client, undefined, client.scopes);
+    await repository.persist(authCode);
+
+    const scopeLinks = await db
+      .select()
+      .from(oauthAuthCodeScopes)
+      .where(eq(oauthAuthCodeScopes.authCodeCode, authCode.code));
+    expect(scopeLinks).toHaveLength(2);
+  });
+
+  it("getByIdentifier loads the client and both scopes", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    const authCode = repository.issueAuthCode(client, undefined, client.scopes);
+    await repository.persist(authCode);
+
+    const loaded = await repository.getByIdentifier(authCode.code);
+    expect(loaded.client.id).toBe(SEEDED_CLIENT_ID);
+    const names = loaded.scopes.map(s => s.name);
+    expect(names).toContain("contacts.read");
+    expect(names).toContain("contacts.write");
+    expect(names).toHaveLength(2);
+  });
+
+  it("isRevoked reflects expiry after revoke", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    const authCode = repository.issueAuthCode(client, undefined, client.scopes);
+    await repository.persist(authCode);
+
+    expect(await repository.isRevoked(authCode.code)).toBe(false);
+    await repository.revoke(authCode.code);
+    expect(await repository.isRevoked(authCode.code)).toBe(true);
+  });
+});
+
+describe("TokenRepository", () => {
+  const repository = new TokenRepository(db);
+  const clientRepository = new ClientRepository(db);
+
+  it("persist writes the token and both scope links; findById reads them back", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    expect(client.scopes).toHaveLength(2);
+
+    const token = await repository.issueToken(client, client.scopes);
+    await repository.persist(token);
+
+    const scopeLinks = await db
+      .select()
+      .from(oauthTokenScopes)
+      .where(eq(oauthTokenScopes.accessToken, token.accessToken));
+    expect(scopeLinks).toHaveLength(2);
+
+    const loaded = await repository.findById(token.accessToken);
+    expect(loaded.client.id).toBe(SEEDED_CLIENT_ID);
+    const names = loaded.scopes.map(s => s.name);
+    expect(names).toContain("contacts.read");
+    expect(names).toContain("contacts.write");
+    expect(names).toHaveLength(2);
+  });
+
+  it("issueRefreshToken rotates the refresh token; getByRefreshToken reads scopes back", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    const token = await repository.issueToken(client, client.scopes);
+    await repository.persist(token);
+
+    expect(token.refreshToken).toBeNull();
+    await repository.issueRefreshToken(token, client);
+    expect(token.refreshToken).toBeTruthy();
+
+    const loaded = await repository.getByRefreshToken(token.refreshToken!);
+    expect(loaded.accessToken).toBe(token.accessToken);
+    expect(loaded.scopes).toHaveLength(2);
+  });
+
+  it("revoke expires the token so findById shows it revoked", async () => {
+    const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
+    const token = await repository.issueToken(client, client.scopes);
+    await repository.persist(token);
+
+    await repository.revoke(token);
+
+    const loaded = await repository.findById(token.accessToken);
+    expect(loaded.isRevoked).toBe(true);
   });
 });

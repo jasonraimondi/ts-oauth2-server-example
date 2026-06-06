@@ -1,32 +1,35 @@
-import { PrismaClient } from "@prisma/client";
-import {
-  DateInterval,
-  generateRandomToken,
-  OAuthClient,
-  OAuthTokenRepository,
-} from "@jmondi/oauth2-server";
+import { eq } from "drizzle-orm";
+import { DateInterval, generateRandomToken } from "@jmondi/oauth2-server";
+import type { OAuthClient, OAuthTokenRepository } from "@jmondi/oauth2-server";
 
-import { Client } from "../entities/client.js";
-import { Scope } from "../entities/scope.js";
+import type { Database } from "../../../db/index.js";
+import { oauthTokens, oauthTokenScopes } from "../../../db/schema.js";
+import type { Client } from "../entities/client.js";
+import type { Scope } from "../entities/scope.js";
 import { Token } from "../entities/token.js";
-import { User } from "../entities/user.js";
-import { DateDuration } from "@jmondi/date-duration";
+import type { User } from "../entities/user.js";
 
 export class TokenRepository implements OAuthTokenRepository {
-  constructor(private readonly prisma: PrismaClient) { }
+  constructor(private readonly db: Database) {}
 
   async findById(accessToken: string): Promise<Token> {
-    const token = await this.prisma.oAuthToken.findUnique({
-      where: {
-        accessToken,
-      },
-      include: {
-        user: true,
+    const row = await this.db.query.oauthTokens.findFirst({
+      where: eq(oauthTokens.accessToken, accessToken),
+      with: {
         client: true,
-        scopes: true,
+        user: true,
+        tokenScopes: { with: { scope: true } },
       },
     });
-    return new Token(token);
+
+    if (!row) {
+      throw new Error(`oauth token not found for access token ${accessToken}`);
+    }
+
+    return new Token({
+      ...row,
+      scopes: row.tokenScopes.map(s => s.scope),
+    });
   }
 
   async issueToken(client: Client, scopes: Scope[], user?: User): Promise<Token> {
@@ -35,7 +38,7 @@ export class TokenRepository implements OAuthTokenRepository {
       accessTokenExpiresAt: new DateInterval("2h").getEndDate(),
       refreshToken: null,
       refreshTokenExpiresAt: null,
-      client,
+      client: client as unknown as ConstructorParameters<typeof Token>[0]["client"],
       clientId: client.id,
       user: user ?? null,
       userId: user?.id ?? null,
@@ -46,57 +49,79 @@ export class TokenRepository implements OAuthTokenRepository {
   }
 
   async getByRefreshToken(refreshToken: string): Promise<Token> {
-    const token = await this.prisma.oAuthToken.findUnique({
-      where: { refreshToken },
-      include: {
+    const row = await this.db.query.oauthTokens.findFirst({
+      where: eq(oauthTokens.refreshToken, refreshToken),
+      with: {
         client: true,
-        scopes: true,
         user: true,
+        tokenScopes: { with: { scope: true } },
       },
     });
-    return new Token(token);
+
+    if (!row) {
+      throw new Error(`oauth token not found for refresh token ${refreshToken}`);
+    }
+
+    return new Token({
+      ...row,
+      scopes: row.tokenScopes.map(s => s.scope),
+    });
   }
 
   async isRefreshTokenRevoked(token: Token): Promise<boolean> {
     return Date.now() > (token.refreshTokenExpiresAt?.getTime() ?? 0);
   }
 
-  async issueRefreshToken(token: Token, _: OAuthClient): Promise<Token> {
+  async issueRefreshToken(token: Token, _client: OAuthClient): Promise<Token> {
     token.refreshToken = generateRandomToken();
     token.refreshTokenExpiresAt = new DateInterval("2h").getEndDate();
-    await this.prisma.oAuthToken.update({
-      where: {
-        accessToken: token.accessToken,
-      },
-      data: {
+    await this.db
+      .update(oauthTokens)
+      .set({
         refreshToken: token.refreshToken,
         refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-      },
-    });
+      })
+      .where(eq(oauthTokens.accessToken, token.accessToken));
     return token;
   }
 
   async persist({ user, client, scopes, ...token }: Token): Promise<void> {
-    await this.prisma.oAuthToken.upsert({
-      where: {
-        accessToken: token.accessToken,
-      },
-      update: {},
-      create: token,
+    await this.db.transaction(async tx => {
+      await tx
+        .insert(oauthTokens)
+        .values({
+          accessToken: token.accessToken,
+          accessTokenExpiresAt: token.accessTokenExpiresAt,
+          refreshToken: token.refreshToken,
+          refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+          clientId: token.clientId,
+          userId: token.userId,
+          createdAt: token.createdAt,
+          updatedAt: token.updatedAt,
+        })
+        .onConflictDoNothing();
+
+      if (scopes.length > 0) {
+        await tx
+          .insert(oauthTokenScopes)
+          .values(scopes.map(scope => ({ accessToken: token.accessToken, scopeId: scope.id })))
+          .onConflictDoNothing();
+      }
     });
   }
 
-  async revoke(accessToken: Token): Promise<void> {
-    accessToken.revoke();
-    await this.update(accessToken);
+  async revoke(tokenEntity: Token): Promise<void> {
+    tokenEntity.revoke();
+    await this.update(tokenEntity);
   }
 
-  private async update({ user, client, scopes, ...token }: Token): Promise<void> {
-    await this.prisma.oAuthToken.update({
-      where: {
-        accessToken: token.accessToken,
-      },
-      data: token,
-    });
+  private async update(token: Token): Promise<void> {
+    await this.db
+      .update(oauthTokens)
+      .set({
+        accessTokenExpiresAt: token.accessTokenExpiresAt,
+        refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+      })
+      .where(eq(oauthTokens.accessToken, token.accessToken));
   }
 }
