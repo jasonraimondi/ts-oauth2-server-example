@@ -1,20 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-import { GrantIdentifier, OAuthScope, OAuthScopeRepository } from "@jmondi/oauth2-server";
+import { inArray } from "drizzle-orm";
+import type { GrantIdentifier, OAuthScope, OAuthScopeRepository } from "@jmondi/oauth2-server";
 
+import type { Database } from "../../../db/index.js";
+import { oauthScopes } from "../../../db/schema.js";
 import { Client } from "../entities/client.js";
 import { Scope } from "../entities/scope.js";
 
 export class ScopeRepository implements OAuthScopeRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly db: Database) {}
 
   async getAllByIdentifiers(scopeNames: string[]): Promise<Scope[]> {
-    const scopes = await this.prisma.oAuthScope.findMany({
-      where: {
-        name: {
-          in: scopeNames,
-        },
-      },
-    });
+    const scopes = await this.db
+      .select()
+      .from(oauthScopes)
+      .where(inArray(oauthScopes.name, scopeNames));
     return scopes.map(s => new Scope(s));
   }
 

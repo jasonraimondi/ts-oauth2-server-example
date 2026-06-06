@@ -1,12 +1,14 @@
-import { GrantIdentifier, OAuthUserRepository } from "@jmondi/oauth2-server";
-import { PrismaClient } from "@prisma/client";
+import { eq } from "drizzle-orm";
+import type { GrantIdentifier, OAuthUserRepository } from "@jmondi/oauth2-server";
 
+import type { Database } from "../../../db/index.js";
+import { users } from "../../../db/schema.js";
 import { Client } from "../entities/client.js";
 import { User } from "../entities/user.js";
 import { verifyPasswordOrThrow } from "../../../lib/password.js";
 
 export class UserRepository implements OAuthUserRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly db: Database) {}
 
   async getUserByCredentials(
     identifier: string,
@@ -14,14 +16,17 @@ export class UserRepository implements OAuthUserRepository {
     _grantType?: GrantIdentifier,
     _client?: Client,
   ): Promise<User> {
-    const user = new User(
-      await this.prisma.user.findUnique({
-        where: { id: identifier },
-      }),
-    );
+    const row = await this.db.query.users.findFirst({
+      where: eq(users.id, identifier),
+    });
 
-    // verity password and if user is allowed to use grant, etc...
-    if (password) await verifyPasswordOrThrow(password, user.passwordHash);
+    if (!row) {
+      throw new Error(`user not found for identifier ${identifier}`);
+    }
+
+    const user = new User(row);
+
+    if (password) await verifyPasswordOrThrow(password, user.passwordHash!);
 
     return user;
   }
