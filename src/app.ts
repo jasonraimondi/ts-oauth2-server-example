@@ -7,6 +7,7 @@ import { OAuthException } from "@jmondi/oauth2-server";
 import { requestFromVanilla, responseToVanilla } from "@jmondi/oauth2-server/vanilla";
 
 import { authorizationServer } from "./container.js";
+import { currentUser } from "./app/oauth/current_user.js";
 import type { User } from "./app/oauth/entities/user.js";
 
 export type Variables = { user?: User };
@@ -14,6 +15,7 @@ export type Variables = { user?: User };
 export const app = new Hono<{ Variables: Variables }>();
 
 app.use(logger());
+app.use(currentUser);
 
 app.get("/api/ping", (c) => c.text("pong"));
 
@@ -50,6 +52,24 @@ app.post("/api/oauth2/revoke", async (c) => {
   try {
     const oauthReq = await requestFromVanilla(c.req.raw);
     return responseToVanilla(await authorizationServer.revoke(oauthReq));
+  } catch (e) {
+    return oauthErrorResponse(c, e);
+  }
+});
+
+app.get("/api/oauth2/authorize", async (c) => {
+  try {
+    const authRequest = await authorizationServer.validateAuthorizationRequest(
+      await requestFromVanilla(c.req.raw),
+    );
+    const user = c.get("user");
+    if (!user) {
+      const params = new URL(c.req.url).search; // includes leading "?"
+      return c.redirect(`/api/login${params}`, 302);
+    }
+    authRequest.user = user;
+    authRequest.isAuthorizationApproved = true; // @todo don't hardcode this value
+    return responseToVanilla(await authorizationServer.completeAuthorizationRequest(authRequest));
   } catch (e) {
     return oauthErrorResponse(c, e);
   }
