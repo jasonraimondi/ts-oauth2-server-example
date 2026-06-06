@@ -3,7 +3,7 @@
   "slug": "tooling-hono-entrypoint",
   "name": "Tooling swap and Hono entrypoint",
   "track": "intent",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 3,
   "labels": [

@@ -3,7 +3,7 @@
   "slug": "login-scopes-jsx-csrf",
   "name": "Login and scopes forms in Hono JSX with CSRF",
   "track": "experience",
-  "status": "in-review",
+  "status": "done",
   "priority": "medium",
   "points": 3,
   "labels": [

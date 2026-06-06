@@ -3,7 +3,7 @@
   "slug": "container-auth-server-jwt",
   "name": "Container, AuthorizationServer, and custom JWT",
   "track": "intent",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 2,
   "labels": [

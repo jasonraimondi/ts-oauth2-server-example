@@ -3,7 +3,7 @@
   "slug": "sveltekit-check-docs-cleanup",
   "name": "SvelteKit verification, docs, and dead-file cleanup",
   "track": "experience",
-  "status": "in-review",
+  "status": "done",
   "priority": "medium",
   "points": 3,
   "labels": [

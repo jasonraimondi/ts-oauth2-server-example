@@ -3,7 +3,7 @@
   "slug": "token-revoke-endpoints",
   "name": "Token and revoke endpoints via vanilla bridge",
   "track": "intent",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 3,
   "labels": [

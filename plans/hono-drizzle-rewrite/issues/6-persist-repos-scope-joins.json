@@ -3,7 +3,7 @@
   "slug": "persist-repos-scope-joins",
   "name": "Persist repositories with transactional scope joins",
   "track": "rules",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 3,
   "labels": [

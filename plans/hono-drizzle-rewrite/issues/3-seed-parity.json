@@ -3,7 +3,7 @@
   "slug": "seed-parity",
   "name": "Seed parity with client-scope links",
   "track": "data",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 2,
   "labels": [

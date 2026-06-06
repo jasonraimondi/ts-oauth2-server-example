@@ -3,7 +3,7 @@
   "slug": "entity-wrappers-drizzle",
   "name": "Entity wrappers retyped to Drizzle",
   "track": "data",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 2,
   "labels": [

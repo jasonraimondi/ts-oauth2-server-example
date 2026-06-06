@@ -3,7 +3,7 @@
   "slug": "vitest-test-db-harness",
   "name": "Vitest test-DB harness",
   "track": "intent",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 2,
   "labels": [

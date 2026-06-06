@@ -3,7 +3,7 @@
   "slug": "resilience-negative-paths",
   "name": "Resilience: OAuth error and CSRF negative paths",
   "track": "resilience",
-  "status": "in-review",
+  "status": "done",
   "priority": "medium",
   "points": 2,
   "labels": [

@@ -3,7 +3,7 @@
   "slug": "authorize-current-user",
   "name": "Authorize endpoint and currentUser middleware",
   "track": "rules",
-  "status": "in-review",
+  "status": "done",
   "priority": "high",
   "points": 3,
   "labels": [
