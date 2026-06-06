@@ -8,7 +8,9 @@ const config = {
   preprocess: vitePreprocess(),
 
   kit: {
-    adapter: adapter(),
+    // SPA mode: emit a fallback page so client-routed paths resolve on a
+    // static host (the routes render entirely in the browser).
+    adapter: adapter({ fallback: "index.html" }),
   },
 };
 

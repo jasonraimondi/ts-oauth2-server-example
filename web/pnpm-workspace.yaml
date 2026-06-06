@@ -1,0 +1,11 @@
+# This web client is its own standalone pnpm project (installed with
+# `pnpm install --ignore-workspace` from web/). pnpm 10+ blocks dependency
+# build scripts by default; allow the ones this toolchain needs.
+onlyBuiltDependencies:
+  - esbuild
+  - "@sveltejs/kit"
+  - svelte-preprocess
+  - "@jmondi/browser-storage"
+# pnpm's pre-run dependency check otherwise aborts `pnpm run` on the
+# "ignored build scripts" warning above; the deps here are trusted.
+verifyDepsBeforeRun: false
