@@ -8,13 +8,15 @@ import { eq, ilike } from "drizzle-orm";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
+import { html } from "hono/html";
+
 import { OAuthException } from "@jmondi/oauth2-server";
 import { requestFromVanilla, responseToVanilla } from "@jmondi/oauth2-server/vanilla";
 import { DateDuration } from "@jmondi/date-duration";
 
 import { authorizationServer, jwt, db } from "./container.js";
 import { users } from "./db/schema.js";
-import { verifyPasswordOrThrow } from "./lib/password.js";
+import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
 import { currentUser } from "./app/oauth/current_user.js";
 import { Login } from "./views/Login.js";
 import { Scopes } from "./views/Scopes.js";
@@ -94,7 +96,7 @@ app.use("/api/scopes", csrf());
 app.get("/api/login", async (c) => {
   try {
     await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-    return c.html(<Login action={"/api/login" + new URL(c.req.url).search} />);
+    return c.html(html`<!doctype html>${(<Login action={"/api/login" + new URL(c.req.url).search} />)}`);
   } catch (e) {
     return oauthErrorResponse(c, e);
   }
@@ -121,11 +123,14 @@ app.post(
       row = await db.query.users.findFirst({ where: ilike(users.email, email) });
       if (!row) return c.text("Unauthorized", 401);
       await verifyPasswordOrThrow(password, row.passwordHash!);
-    } catch {
-      return c.text("Unauthorized", 401);
+    } catch (e) {
+      // Map only an auth failure to 401; let real DB errors surface as a 500.
+      if (e instanceof InvalidAuthorizationError) return c.text("Unauthorized", 401);
+      throw e;
     }
 
-    const ip = c.req.header("x-forwarded-for") ?? "127.0.0.1";
+    // X-Forwarded-For may be a comma-separated list; take the first hop (inet rejects a list).
+    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
     await db
       .update(users)
       .set({ lastLoginAt: new Date(), lastLoginIP: ip })
@@ -155,11 +160,13 @@ app.get("/api/scopes", async (c) => {
       await requestFromVanilla(c.req.raw),
     );
     return c.html(
-      <Scopes
-        action={"/api/scopes" + new URL(c.req.url).search}
-        client={authRequest.client}
-        scopes={authRequest.scopes}
-      />,
+      html`<!doctype html>${(
+        <Scopes
+          action={"/api/scopes" + new URL(c.req.url).search}
+          client={authRequest.client}
+          scopes={authRequest.scopes}
+        />
+      )}`,
     );
   } catch (e) {
     return oauthErrorResponse(c, e);

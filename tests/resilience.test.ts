@@ -96,8 +96,12 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     const { verifier, challenge } = pkce();
     const code = await mintCode(challenge, "expired-code");
 
-    // Expire the only auth-code row this test created; truncation clears it next test.
-    await db.update(oauthAuthCodes).set({ expiresAt: new Date(0) });
+    // Expire the auth-code row this test created (truncation clears it next test).
+    const [authCodeRow] = await db.select({ code: oauthAuthCodes.code }).from(oauthAuthCodes);
+    await db
+      .update(oauthAuthCodes)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(oauthAuthCodes.code, authCodeRow.code));
 
     const res = await postToken({
       grant_type: "authorization_code",
@@ -132,9 +136,13 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     expect(refresh_token).toEqual(expect.any(String));
 
     // The response refresh_token is an encrypted JWT, not the stored column
-    // value, so expire the only token row this test created (truncation clears
-    // it next test) rather than matching on the opaque response value.
-    await db.update(oauthTokens).set({ refreshTokenExpiresAt: new Date(0) });
+    // value, so expire the token row this test created (keyed by its accessToken
+    // PK; truncation clears it next test) rather than matching the opaque value.
+    const [tokenRow] = await db.select({ accessToken: oauthTokens.accessToken }).from(oauthTokens);
+    await db
+      .update(oauthTokens)
+      .set({ refreshTokenExpiresAt: new Date(0) })
+      .where(eq(oauthTokens.accessToken, tokenRow.accessToken));
 
     const res = await postToken({
       grant_type: "refresh_token",

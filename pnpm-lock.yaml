@@ -17,6 +17,9 @@ importers:
       '@jmondi/date-duration':
         specifier: ^0.1.1
         version: 0.1.1
+      '@jmondi/oauth2-server':
+        specifier: ^4.0.10
+        version: 4.0.10
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -36,9 +39,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@jmondi/oauth2-server':
-        specifier: ^4.0.10
-        version: 4.0.10
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6

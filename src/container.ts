@@ -16,7 +16,9 @@ const userRepository = new UserRepository(db);
 const authCodeRepository = new AuthCodeRepository(db);
 const tokenRepository = new TokenRepository(db);
 
-const jwt = new MyCustomJwtService(process.env.JWT_SECRET!);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) throw new Error("JWT_SECRET environment variable is required");
+const jwt = new MyCustomJwtService(jwtSecret);
 
 const authorizationServer = new AuthorizationServer(
   clientRepository,
