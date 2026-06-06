@@ -27,5 +27,5 @@
     "sourceMap": true,
     "types": ["./src/global.d.ts"]
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "prisma/**/*.ts"]
 }
