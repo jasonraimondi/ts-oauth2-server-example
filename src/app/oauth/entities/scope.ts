@@ -1,5 +1,7 @@
-import { OAuthScope as ScopeModel } from "@prisma/client";
-import { OAuthScope } from "@jmondi/oauth2-server";
+import { oauthScopes } from "../../../db/schema.js";
+import type { OAuthScope } from "@jmondi/oauth2-server";
+
+type ScopeModel = typeof oauthScopes.$inferSelect;
 
 export class Scope implements ScopeModel, OAuthScope {
   readonly id: string;

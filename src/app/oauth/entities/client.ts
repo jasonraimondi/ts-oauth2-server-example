@@ -1,7 +1,12 @@
-import { OAuthClient as ClientModel, OAuthScope as ScopeModel } from "@prisma/client";
-import { GrantIdentifier, OAuthClient } from "@jmondi/oauth2-server";
+import { oauthClients, oauthScopes } from "../../../db/schema.js";
+import type { GrantIdentifier, OAuthClient } from "@jmondi/oauth2-server";
 
 import { Scope } from "./scope.js";
+
+type ClientModel = Omit<typeof oauthClients.$inferSelect, "allowedGrants"> & {
+  allowedGrants: GrantIdentifier[];
+};
+type ScopeModel = typeof oauthScopes.$inferSelect;
 
 type Relations = {
   scopes: ScopeModel[];

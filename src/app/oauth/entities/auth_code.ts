@@ -1,14 +1,14 @@
-import {
-  OAuthClient as ClientModel,
-  OAuthAuthCode as AuthCodeModel,
-  OAuthScope as ScopeModel,
-  User as UserModel,
-} from "@prisma/client";
-import { OAuthAuthCode, CodeChallengeMethod } from "@jmondi/oauth2-server";
+import { oauthAuthCodes, oauthClients, oauthScopes, users } from "../../../db/schema.js";
+import type { OAuthAuthCode, CodeChallengeMethod } from "@jmondi/oauth2-server";
 
 import { Client } from "./client.js";
 import { Scope } from "./scope.js";
 import { User } from "./user.js";
+
+type AuthCodeModel = typeof oauthAuthCodes.$inferSelect;
+type ClientModel = typeof oauthClients.$inferSelect;
+type ScopeModel = typeof oauthScopes.$inferSelect;
+type UserModel = typeof users.$inferSelect;
 
 type Optional = Partial<{
   user: UserModel;
