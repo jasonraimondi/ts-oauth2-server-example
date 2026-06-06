@@ -100,12 +100,12 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     const { verifier, challenge } = pkce();
     const query = authorizeQuery(challenge, "loginflow");
 
-    // UC-2: unauthenticated authorize -> redirect to login, query preserved.
+    // Unauthenticated authorize -> redirect to login, query preserved.
     const noSession = await app.request(`/api/oauth2/authorize?${query}`, { redirect: "manual" });
     expect(noSession.status).toBe(302);
     expect(noSession.headers.get("location")).toBe(`/api/login?${query}`);
 
-    // UC-3: login POST authenticates and redirects back to authorize with a jid.
+    // Login POST authenticates and redirects back to authorize with a jid.
     const loginRes = await app.request(`/api/login?${query}`, {
       method: "POST",
       headers: formHeaders,
@@ -116,7 +116,7 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     expect(loginRes.headers.get("location")).toBe(`/api/oauth2/authorize?${query}`);
     const jid = jidFromSetCookie(loginRes.headers.get("set-cookie")!);
 
-    // UC-4: authorize with the captured cookie completes -> callback with a code.
+    // Authorize with the captured cookie completes -> callback with a code.
     const authorizeRes = await app.request(`/api/oauth2/authorize?${query}`, {
       headers: { Cookie: `jid=${jid}` },
       redirect: "manual",
@@ -128,7 +128,7 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     expect(callbackParams.get("state")).toBe("loginflow");
     const code = callbackParams.get("code")!;
 
-    // UC-5: exchange the code -> tokens with both scopes intact.
+    // Exchange the code -> tokens with both scopes intact.
     const tokenRes = await exchangeCode(code, verifier);
     expect(tokenRes.status).toBe(200);
     const json = await tokenRes.json();
