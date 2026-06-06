@@ -4,8 +4,8 @@
   import { CLIENT_ID } from "$lib/auth";
   import type { TokenResponse } from "$lib/types";
 
-  let tokens: TokenResponse | null = null;
-  let error: string | null = null;
+  let tokens = $state<TokenResponse | null>(null);
+  let error = $state<string | null>(null);
 
   async function refresh() {
     error = null;
@@ -34,7 +34,7 @@
   }
 </script>
 
-<button on:click={refresh}>Refresh token</button>
+<button onclick={refresh}>Refresh token</button>
 
 {#if error}
   <p>{error}</p>

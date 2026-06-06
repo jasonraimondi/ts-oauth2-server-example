@@ -6,7 +6,7 @@
   import { goto } from "$app/navigation";
   import type { TokenResponse } from "$lib/types";
 
-  let error: string | null = null;
+  let error = $state<string | null>(null);
 
   onMount(async () => {
     const url = new URL(window.location.href);

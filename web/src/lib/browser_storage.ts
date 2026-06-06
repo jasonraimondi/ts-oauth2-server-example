@@ -1,5 +1,7 @@
 import { BrowserStorage, SessionStorage, type Adapter } from "@jmondi/browser-storage";
-import Cookies, { type CookieAttributes } from "js-cookie";
+import Cookies from "js-cookie";
+
+type CookieAttributes = Cookies.CookieAttributes;
 
 /*
  * ============================================================================
