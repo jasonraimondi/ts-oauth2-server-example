@@ -18,8 +18,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1
       '@jmondi/oauth2-server':
-        specifier: ^4.0.10
-        version: 4.0.10
+        specifier: 5.0.0-rc.1
+        version: 5.0.0-rc.1
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -546,9 +546,9 @@ packages:
     resolution: {integrity: sha512-o/MdnGQQF9rDAU0PFIrnAskhqRi+Jk1V/BczgTs6/U5YhSVKFgvJIfWuwwHkQk1OUm83mFx3Mhg+sUxRh3Z1Lg==}
     engines: {node: '>=18.0.0'}
 
-  '@jmondi/oauth2-server@4.0.10':
-    resolution: {integrity: sha512-8wkUpDOpNiCSuFGFfbtipO4ORnrLrZ7pWdsOw9gFDu0AqGx6QZicWva7+vP0bsyuAagM+XEm20kfBTAsMZfOaA==}
-    engines: {node: '>=16'}
+  '@jmondi/oauth2-server@5.0.0-rc.1':
+    resolution: {integrity: sha512-4gEbxT5HF47fL/1TtDLGiEwq7uDmqbv71NPzyQnxuLGt7yxAW5CHLNsgdn+d2D0Q2oBIDIzTetQ+L6QA8FLWRQ==}
+    engines: {node: '>=22'}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -892,15 +892,15 @@ packages:
     resolution: {integrity: sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA==}
     engines: {node: '>=16.9.0'}
 
-  jsonwebtoken@9.0.2:
-    resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}
+  jsonwebtoken@9.0.3:
+    resolution: {integrity: sha512-MT/xP0CrubFRNLNKvxJ2BYfy53Zkm++5bX9dtuPbqAeQpTVe0MQTFhao8+Cp//EmJp244xt6Drw/GVEGCUj40g==}
     engines: {node: '>=12', npm: '>=6'}
 
-  jwa@1.4.2:
-    resolution: {integrity: sha512-eeH5JO+21J78qMvTIDdBXidBd6nG2kZjg5Ohz/1fpa28Z4CcsWUzJ1ZZyFq/3z3N17aZy+ZuBoHljASbL1WfOw==}
+  jwa@2.0.1:
+    resolution: {integrity: sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==}
 
-  jws@3.2.2:
-    resolution: {integrity: sha512-YHlZCB6lMTllWDtSPHz/ZXTsi8S00usEV6v1tjq8tOUZzw7DpSDWVXjXDre6ed1w/pd495ODpHZYSdkRTsa0HA==}
+  jws@4.0.1:
+    resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -1465,9 +1465,9 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  '@jmondi/oauth2-server@4.0.10':
+  '@jmondi/oauth2-server@5.0.0-rc.1':
     dependencies:
-      jsonwebtoken: 9.0.2
+      jsonwebtoken: 9.0.3
       ms: 2.1.3
       uri-js: 4.4.1
 
@@ -1742,9 +1742,9 @@ snapshots:
 
   hono@4.12.23: {}
 
-  jsonwebtoken@9.0.2:
+  jsonwebtoken@9.0.3:
     dependencies:
-      jws: 3.2.2
+      jws: 4.0.1
       lodash.includes: 4.3.0
       lodash.isboolean: 3.0.3
       lodash.isinteger: 4.0.4
@@ -1755,15 +1755,15 @@ snapshots:
       ms: 2.1.3
       semver: 7.7.2
 
-  jwa@1.4.2:
+  jwa@2.0.1:
     dependencies:
       buffer-equal-constant-time: 1.0.1
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
 
-  jws@3.2.2:
+  jws@4.0.1:
     dependencies:
-      jwa: 1.4.2
+      jwa: 2.0.1
       safe-buffer: 5.2.1
 
   lightningcss-android-arm64@1.32.0:
