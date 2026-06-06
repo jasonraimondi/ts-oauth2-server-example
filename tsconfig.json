@@ -24,8 +24,7 @@
 
     /* Output Options */
     "removeComments": true,
-    "sourceMap": true,
-    "types": ["./src/global.d.ts"]
+    "sourceMap": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "prisma/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

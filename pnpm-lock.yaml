@@ -39,9 +39,6 @@ importers:
       '@jmondi/oauth2-server':
         specifier: ^4.0.10
         version: 4.0.10
-      '@jmondi/tsconfig':
-        specifier: 0.2.0-alpha.3
-        version: 0.2.0-alpha.3
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6
@@ -552,9 +549,6 @@ packages:
   '@jmondi/oauth2-server@4.0.10':
     resolution: {integrity: sha512-8wkUpDOpNiCSuFGFfbtipO4ORnrLrZ7pWdsOw9gFDu0AqGx6QZicWva7+vP0bsyuAagM+XEm20kfBTAsMZfOaA==}
     engines: {node: '>=16'}
-
-  '@jmondi/tsconfig@0.2.0-alpha.3':
-    resolution: {integrity: sha512-NAAzyR5mpNboDCUT/S5S8cBjnrvW/+E+TsYHM72eNVerKXkwUmjY7iP9D3eCtlA9dSh4HO8rX8NLDtt9XfgYBw==}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -1476,8 +1470,6 @@ snapshots:
       jsonwebtoken: 9.0.2
       ms: 2.1.3
       uri-js: 4.4.1
-
-  '@jmondi/tsconfig@0.2.0-alpha.3': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
