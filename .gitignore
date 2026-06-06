@@ -7,3 +7,6 @@ dist/
 .pi/skills/bender-*
 .pb-lock
 .serena/
+
+# parallel-agent worktrees
+.worktrees/
