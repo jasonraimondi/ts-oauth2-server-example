@@ -3,7 +3,7 @@
   "slug": "token-revoke-endpoints",
   "name": "Token and revoke endpoints via vanilla bridge",
   "track": "intent",
-  "status": "backlog",
+  "status": "in-review",
   "priority": "high",
   "points": 3,
   "labels": [
@@ -17,10 +17,10 @@
     11
   ],
   "branch": null,
-  "pr": null,
+  "pr": 10,
   "linear_id": null,
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-06",
   "tdd": true,
   "headed": false,
   "outcome": "POST /api/oauth2/token and POST /api/oauth2/revoke work through the vanilla Fetch bridge, including correct OAuth error responses.",

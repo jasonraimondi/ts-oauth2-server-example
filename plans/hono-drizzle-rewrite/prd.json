@@ -3,7 +3,7 @@
   "slug": "hono-drizzle-rewrite",
   "status": "active",
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-06",
   "description": "Rewrite the @jmondi/oauth2-server example server from NestJS/Express + Prisma to HonoJS + Drizzle, preserving grants, routes, and seed data.",
   "why": "The example is the reference integration for @jmondi/oauth2-server. NestJS/Express + Prisma is heavy, decorator-laden, and not Fetch-native. A Hono + Drizzle rewrite shows the library wired into a smaller, modern, Fetch-native stack and fixes latent bugs (dropped scopes, an unlinked seed) so the example teaches correct patterns.",
   "outcome": "A HonoJS server on @hono/node-server (port 3000, /api prefix) backed by Drizzle/postgres.js, bridging OAuth via the framework-agnostic vanilla Fetch adapter, with scopes correctly persisted and a Vitest integration suite proving the full authorization_code + PKCE and refresh_token flows. The untouched SvelteKit client keeps working.",

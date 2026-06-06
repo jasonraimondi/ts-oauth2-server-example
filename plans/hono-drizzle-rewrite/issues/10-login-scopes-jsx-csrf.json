@@ -3,7 +3,7 @@
   "slug": "login-scopes-jsx-csrf",
   "name": "Login and scopes forms in Hono JSX with CSRF",
   "track": "experience",
-  "status": "backlog",
+  "status": "in-review",
   "priority": "medium",
   "points": 3,
   "labels": [
@@ -17,10 +17,10 @@
     11
   ],
   "branch": null,
-  "pr": null,
+  "pr": 10,
   "linear_id": null,
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-06",
   "tdd": false,
   "headed": true,
   "outcome": "The login and scopes screens render via Hono JSX, the login POST authenticates and sets the jid cookie then redirects to authorize, and form POSTs are protected by origin-based CSRF.",
