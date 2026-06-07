@@ -118,7 +118,7 @@ describe("TokenRepository", () => {
   const repository = new TokenRepository(db);
   const clientRepository = new ClientRepository(db);
 
-  it("persist writes the token and both scope links; findById reads them back", async () => {
+  it("persist writes the token and both scope links; getByAccessToken reads them back", async () => {
     const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
     expect(client.scopes).toHaveLength(2);
 
@@ -131,7 +131,7 @@ describe("TokenRepository", () => {
       .where(eq(oauthTokenScopes.accessToken, token.accessToken));
     expect(scopeLinks).toHaveLength(2);
 
-    const loaded = await repository.findById(token.accessToken);
+    const loaded = await repository.getByAccessToken(token.accessToken);
     expect(loaded.client.id).toBe(SEEDED_CLIENT_ID);
     const names = loaded.scopes.map(s => s.name);
     expect(names).toContain("contacts.read");
@@ -153,14 +153,15 @@ describe("TokenRepository", () => {
     expect(loaded.scopes).toHaveLength(2);
   });
 
-  it("revoke expires the token so findById shows it revoked", async () => {
+  it("revoke expires the token so getByAccessToken + isAccessTokenRevoked show it revoked", async () => {
     const client = await clientRepository.getByIdentifier(SEEDED_CLIENT_ID);
     const token = await repository.issueToken(client, client.scopes);
     await repository.persist(token);
 
     await repository.revoke(token);
 
-    const loaded = await repository.findById(token.accessToken);
-    expect(loaded.isRevoked).toBe(true);
+    const loaded = await repository.getByAccessToken(token.accessToken);
+    expect(loaded.isExpired).toBe(true);
+    expect(await repository.isAccessTokenRevoked(loaded)).toBe(true);
   });
 });

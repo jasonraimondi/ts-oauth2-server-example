@@ -74,9 +74,9 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       });
 
       if (scopes.length > 0) {
-        await tx.insert(oauthAuthCodeScopes).values(
-          scopes.map(scope => ({ authCodeCode: authCode.code, scopeId: scope.id })),
-        );
+        await tx
+          .insert(oauthAuthCodeScopes)
+          .values(scopes.map(scope => ({ authCodeCode: authCode.code, scopeId: scope.id })));
       }
     });
   }

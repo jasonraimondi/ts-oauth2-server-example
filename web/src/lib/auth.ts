@@ -17,8 +17,11 @@ async function challengeFromVerifier(verifier: string): Promise<string> {
 }
 
 export async function createAuth() {
-  const state = genRandomString(10);
-  const verifier = genRandomString(80);
+  // 16 bytes (128 bits) of entropy for the anti-CSRF state.
+  const state = genRandomString(16);
+  // 32 bytes -> 64 hex chars, comfortably inside the RFC 7636 PKCE
+  // code_verifier range of 43-128 characters.
+  const verifier = genRandomString(32);
   const challenge = await challengeFromVerifier(verifier);
   return { state, verifier, challenge };
 }

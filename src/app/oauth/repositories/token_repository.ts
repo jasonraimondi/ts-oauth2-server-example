@@ -9,10 +9,17 @@ import type { Scope } from "../entities/scope.js";
 import { Token } from "../entities/token.js";
 import type { User } from "../entities/user.js";
 
+// Token/session lifetime model for this example:
+//   access token  -> 1h  (set by the grant's accessTokenTTL in container.ts)
+//   refresh token -> 30d (issueRefreshToken below)
+//   session cookie -> 30d (signSession in app.tsx / lib/session.ts)
 export class TokenRepository implements OAuthTokenRepository {
   constructor(private readonly db: Database) {}
 
-  async findById(accessToken: string): Promise<Token> {
+  // The library calls getByAccessToken with the JWT `jti`, which equals the
+  // random token we stored in oauthTokens.accessToken. It powers both the
+  // access-token revoke path and the /userinfo revocation guard.
+  async getByAccessToken(accessToken: string): Promise<Token> {
     const row = await this.db.query.oauthTokens.findFirst({
       where: eq(oauthTokens.accessToken, accessToken),
       with: {
@@ -32,10 +39,18 @@ export class TokenRepository implements OAuthTokenRepository {
     });
   }
 
+  // This demo models revocation as force-expiry: revoke() pushes the expiry into
+  // the past, so a revoked access token reads as expired here.
+  async isAccessTokenRevoked(token: Token): Promise<boolean> {
+    return token.isExpired;
+  }
+
   async issueToken(client: Client, scopes: Scope[], user?: User): Promise<Token> {
     return new Token({
       accessToken: generateRandomToken(),
-      accessTokenExpiresAt: new DateInterval("2h").getEndDate(),
+      // The authorization_code grant's accessTokenTTL (1h, in container.ts)
+      // overrides this value, so it never reaches a real response.
+      accessTokenExpiresAt: new DateInterval("1h").getEndDate(),
       refreshToken: null,
       refreshTokenExpiresAt: null,
       client: client as unknown as ConstructorParameters<typeof Token>[0]["client"],
@@ -74,7 +89,9 @@ export class TokenRepository implements OAuthTokenRepository {
 
   async issueRefreshToken(token: Token, _client: OAuthClient): Promise<Token> {
     token.refreshToken = generateRandomToken();
-    token.refreshTokenExpiresAt = new DateInterval("2h").getEndDate();
+    // Refresh tokens outlive the 1h access token so a client can stay logged in
+    // for the 30-day session window without re-running the authorize flow.
+    token.refreshTokenExpiresAt = new DateInterval("30d").getEndDate();
     await this.db
       .update(oauthTokens)
       .set({

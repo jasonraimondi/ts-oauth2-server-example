@@ -125,10 +125,9 @@ describe("POST /api/oauth2/token happy path", () => {
 });
 
 describe("POST /api/oauth2/revoke", () => {
-  // NOTE: the library's access-token revoke path requires
-  // TokenRepository#getByAccessToken, which this repo does not implement; the
-  // refresh-token path (getByRefreshToken, implemented) exercises the same
-  // route + vanilla bridge and is what proves a valid 200 revoke here.
+  // The refresh-token path (getByRefreshToken) exercises the route + vanilla
+  // bridge for a valid 200 revoke. The access-token revoke path (which needs
+  // getByAccessToken, now implemented) is covered in oauth-flow's revocation test.
   it("returns 200 for a valid revoke of an issued refresh token", async () => {
     const { code, verifier } = await mintAuthCode();
 

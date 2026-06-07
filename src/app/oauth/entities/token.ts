@@ -46,7 +46,10 @@ export class Token implements TokenModel, OAuthToken {
     this.updatedAt = entity.updatedAt ?? null;
   }
 
-  get isRevoked() {
+  // Named isExpired (not isRevoked): the OAuthToken interface declares no such
+  // member, so the library never calls this. It exists for our own repository's
+  // isAccessTokenRevoked, where revocation is modeled as force-expiry by revoke().
+  get isExpired() {
     return Date.now() > this.accessTokenExpiresAt.getTime();
   }
 

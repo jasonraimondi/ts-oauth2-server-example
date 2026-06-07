@@ -1,21 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { jwt } from "../src/container.js";
+import { approveAuthorize, formHeaders, jidFromSetCookie, mintJid, pkce } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
-const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
 const REDIRECT = "http://localhost:5173/callback";
-
-type Pkce = { verifier: string; challenge: string };
-
-function pkce(): Pkce {
-  const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  return { verifier, challenge };
-}
 
 function authorizeQuery(challenge: string, state: string): string {
   const scope = encodeURIComponent("contacts.read contacts.write");
@@ -24,24 +13,6 @@ function authorizeQuery(challenge: string, state: string): string {
     `&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=${scope}&state=${state}` +
     `&code_challenge=${challenge}&code_challenge_method=S256`
   );
-}
-
-async function mintJid(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ userId: USER_ID, email: "jason@example.com", iat: now, exp: now + 3600 });
-}
-
-// app.request uses http://localhost as the origin; mirror it so hono/csrf passes.
-const formHeaders = {
-  "content-type": "application/x-www-form-urlencoded",
-  origin: "http://localhost",
-  host: "localhost",
-};
-
-// Pull the jid value out of a Set-Cookie header (`jid=<value>; HttpOnly; ...`).
-function jidFromSetCookie(setCookie: string): string {
-  const match = /(?:^|,\s*)jid=([^;]+)/.exec(setCookie);
-  return match![1];
 }
 
 async function exchangeCode(code: string, verifier: string): Promise<Response> {
@@ -64,10 +35,8 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     const query = authorizeQuery(challenge, "abc123");
     const jid = await mintJid();
 
-    const authorizeRes = await app.request(`/api/oauth2/authorize?${query}`, {
-      headers: { Cookie: `jid=${jid}` },
-      redirect: "manual",
-    });
+    // Drive authorize -> consent (accept=yes) -> callback with a code.
+    const authorizeRes = await approveAuthorize(query, jid);
 
     expect(authorizeRes.status).toBe(302);
     const location = authorizeRes.headers.get("location")!;
@@ -116,11 +85,8 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     expect(loginRes.headers.get("location")).toBe(`/api/oauth2/authorize?${query}`);
     const jid = jidFromSetCookie(loginRes.headers.get("set-cookie")!);
 
-    // Authorize with the captured cookie completes -> callback with a code.
-    const authorizeRes = await app.request(`/api/oauth2/authorize?${query}`, {
-      headers: { Cookie: `jid=${jid}` },
-      redirect: "manual",
-    });
+    // Authorize with the captured cookie -> consent -> callback with a code.
+    const authorizeRes = await approveAuthorize(query, jid);
     expect(authorizeRes.status).toBe(302);
     const location = authorizeRes.headers.get("location")!;
     expect(location.startsWith(`${REDIRECT}?`)).toBe(true);
@@ -145,10 +111,7 @@ describe("refresh_token rotation + scope narrowing", () => {
     const query = authorizeQuery(challenge, "refresh");
     const jid = await mintJid();
 
-    const authorizeRes = await app.request(`/api/oauth2/authorize?${query}`, {
-      headers: { Cookie: `jid=${jid}` },
-      redirect: "manual",
-    });
+    const authorizeRes = await approveAuthorize(query, jid);
     const code = new URL(authorizeRes.headers.get("location")!).searchParams.get("code")!;
 
     const firstExchange = await exchangeCode(code, verifier);

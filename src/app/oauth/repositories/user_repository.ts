@@ -5,7 +5,7 @@ import type { Database } from "../../../db/index.js";
 import { users } from "../../../db/schema.js";
 import { Client } from "../entities/client.js";
 import { User } from "../entities/user.js";
-import { verifyPasswordOrThrow } from "../../../lib/password.js";
+import { verifyPasswordOrThrow, InvalidAuthorizationError } from "../../../lib/password.js";
 
 export class UserRepository implements OAuthUserRepository {
   constructor(private readonly db: Database) {}
@@ -26,7 +26,13 @@ export class UserRepository implements OAuthUserRepository {
 
     const user = new User(row);
 
-    if (password) await verifyPasswordOrThrow(password, user.passwordHash!);
+    // A null passwordHash (e.g. an SSO-only account) can never match a supplied
+    // password, so reject via the same InvalidAuthorizationError path — never a
+    // 500 from a non-null assertion on a missing hash.
+    if (password) {
+      if (!user.passwordHash) throw new InvalidAuthorizationError("invalid password");
+      await verifyPasswordOrThrow(password, user.passwordHash);
+    }
 
     return user;
   }

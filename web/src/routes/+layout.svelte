@@ -1,3 +1,7 @@
+<script lang="ts">
+  let { children } = $props();
+</script>
+
 <nav>
   <ul>
     <li><a href="/">Home</a></li>
@@ -6,4 +10,4 @@
   </ul>
 </nav>
 
-<slot />
+{@render children()}
