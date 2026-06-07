@@ -1,6 +1,21 @@
 node_modules/
 dist/
 .env
+
+# editor / IDE
+/.idea/
+
+# personal tool state (not part of the example)
 .plan-bender/
 .plan-bender.local.json
+.plan-bender.json
+pb-error-report-*.log
 .claude/skills/bender-*
+.claude/settings.local.json
+.claude/worktrees/
+.pi/
+.pb-lock
+.serena/
+
+# parallel-agent worktrees
+.worktrees/

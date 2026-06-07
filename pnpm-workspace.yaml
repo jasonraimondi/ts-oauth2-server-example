@@ -1,6 +1,4 @@
 allowBuilds:
-  '@nestjs/core': true
-  '@prisma/client': true
-  '@prisma/engines': true
-  '@swc/core': true
-  prisma: true
+  esbuild: true
+minimumReleaseAgeExclude:
+  - "@jmondi/oauth2-server"

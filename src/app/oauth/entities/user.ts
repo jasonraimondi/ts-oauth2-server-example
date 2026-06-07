@@ -1,11 +1,14 @@
-import { User as UserModel } from "@prisma/client";
-import { OAuthUser } from "@jmondi/oauth2-server";
+import { users } from "../../../db/schema.js";
+import type { OAuthUser } from "@jmondi/oauth2-server";
+
+type UserModel = typeof users.$inferSelect;
 
 export class User implements UserModel, OAuthUser {
   readonly id: string;
   email: string;
+  name: string | null;
   passwordHash: string | null;
-  tokenVersion = 0;
+  tokenVersion: number;
   lastLoginAt: Date | null;
   lastLoginIP: string | null;
   createdIP: string;
@@ -15,6 +18,7 @@ export class User implements UserModel, OAuthUser {
   constructor(entity: UserModel) {
     this.id = entity.id;
     this.email = entity.email;
+    this.name = entity.name;
     this.passwordHash = entity.passwordHash;
     this.tokenVersion = entity.tokenVersion;
     this.lastLoginAt = entity.lastLoginAt;

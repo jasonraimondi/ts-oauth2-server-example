@@ -1,20 +1,29 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "moduleDetection": "force",
 
-    /* Advanced Options */
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    /* Strictness */
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    /* Interop */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
 
-    /* Output Options */
-    "removeComments": true,
-    "sourceMap": true,
-    "types": ["./src/global.d.ts", "csrf-csrf"]
+    /* JSX (Hono) */
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+
+    /* This project runs from source via tsx (dev) and is never emitted to
+       dist, so `tsc` (pnpm build) is used purely as a type-checker. */
+    "noEmit": true
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

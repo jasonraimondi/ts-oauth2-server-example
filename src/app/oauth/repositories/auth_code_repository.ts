@@ -1,29 +1,37 @@
-import { PrismaClient } from "@prisma/client";
-import {
-  DateInterval,
-  generateRandomToken,
-  OAuthAuthCode,
-  OAuthAuthCodeRepository,
-} from "@jmondi/oauth2-server";
+import { eq } from "drizzle-orm";
+import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
+import type { OAuthAuthCode, OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
 
+import type { Database } from "../../../db/index.js";
+import { oauthAuthCodes, oauthAuthCodeScopes } from "../../../db/schema.js";
 import { AuthCode } from "../entities/auth_code.js";
-import { Client } from "../entities/client.js";
-import { Scope } from "../entities/scope.js";
-import { User } from "../entities/user.js";
+import type { Client } from "../entities/client.js";
+import type { Scope } from "../entities/scope.js";
+import type { User } from "../entities/user.js";
 
 export class AuthCodeRepository implements OAuthAuthCodeRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly db: Database) {}
 
   async getByIdentifier(authCodeCode: string): Promise<AuthCode> {
-    const entity = await this.prisma.oAuthAuthCode.findUnique({
-      where: {
-        code: authCodeCode,
-      },
-      include: {
+    const row = await this.db.query.oauthAuthCodes.findFirst({
+      where: eq(oauthAuthCodes.code, authCodeCode),
+      with: {
         client: true,
+        authCodeScopes: { with: { scope: true } },
       },
     });
-    return new AuthCode(entity);
+
+    if (!row) {
+      // RFC 6749 invalid_grant (400) for an unknown/replayed code, with no code
+      // value echoed. The library resolves codes via this method with no catch, so
+      // a plain Error would surface as a 500 leaking the code in the body.
+      throw OAuthException.invalidGrant("The authorization code is invalid or has expired.");
+    }
+
+    return new AuthCode({
+      ...row,
+      scopes: row.authCodeScopes.map(s => s.scope),
+    });
   }
 
   async isRevoked(authCodeCode: string): Promise<boolean> {
@@ -37,6 +45,9 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       code: generateRandomToken(),
       codeChallenge: null,
       codeChallengeMethod: "S256",
+      nonce: null,
+      authTime: null,
+      maxAge: null,
       expiresAt: new DateInterval("15m").getEndDate(),
       client,
       clientId: client.id,
@@ -49,15 +60,34 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
   }
 
   async persist({ user, client, scopes, ...authCode }: AuthCode): Promise<void> {
-    await this.prisma.oAuthAuthCode.create({ data: authCode });
+    await this.db.transaction(async tx => {
+      await tx.insert(oauthAuthCodes).values({
+        code: authCode.code,
+        redirectUri: authCode.redirectUri,
+        codeChallenge: authCode.codeChallenge,
+        codeChallengeMethod: authCode.codeChallengeMethod,
+        nonce: authCode.nonce ?? null,
+        authTime: authCode.authTime ?? null,
+        maxAge: authCode.maxAge ?? null,
+        expiresAt: authCode.expiresAt,
+        userId: authCode.userId,
+        clientId: authCode.clientId,
+        createdAt: authCode.createdAt,
+        updatedAt: authCode.updatedAt,
+      });
+
+      if (scopes.length > 0) {
+        await tx
+          .insert(oauthAuthCodeScopes)
+          .values(scopes.map(scope => ({ authCodeCode: authCode.code, scopeId: scope.id })));
+      }
+    });
   }
 
   async revoke(authCodeCode: string): Promise<void> {
-    await this.prisma.oAuthAuthCode.update({
-      where: { code: authCodeCode },
-      data: {
-        expiresAt: new Date(0),
-      },
-    });
+    await this.db
+      .update(oauthAuthCodes)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(oauthAuthCodes.code, authCodeCode));
   }
 }

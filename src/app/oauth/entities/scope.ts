@@ -1,5 +1,7 @@
-import { OAuthScope as ScopeModel } from "@prisma/client";
-import { OAuthScope } from "@jmondi/oauth2-server";
+import { oauthScopes } from "../../../db/schema.js";
+import type { OAuthScope } from "@jmondi/oauth2-server";
+
+type ScopeModel = typeof oauthScopes.$inferSelect;
 
 export class Scope implements ScopeModel, OAuthScope {
   readonly id: string;
@@ -10,8 +12,7 @@ export class Scope implements ScopeModel, OAuthScope {
   constructor(entity: ScopeModel) {
     this.id = entity.id;
     this.name = entity.name;
-
-    this.createdAt = entity.createdAt ?? new Date();
-    this.updatedAt = entity.updatedAt ?? null;
+    this.createdAt = entity.createdAt;
+    this.updatedAt = entity.updatedAt;
   }
 }

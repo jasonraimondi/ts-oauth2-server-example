@@ -6,7 +6,6 @@ tabWidth: 2
 semi: true
 singleQuote: false
 plugins: ["prettier-plugin-svelte"]
-pluginSearchDirs: ["."]
 overrides:
   - files: "*.svelte"
     options:

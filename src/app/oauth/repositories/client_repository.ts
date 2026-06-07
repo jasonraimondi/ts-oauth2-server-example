@@ -1,22 +1,31 @@
-import { PrismaClient } from "@prisma/client";
-import { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmondi/oauth2-server";
+import { eq } from "drizzle-orm";
+import { OAuthException } from "@jmondi/oauth2-server";
+import type { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmondi/oauth2-server";
 
+import type { Database } from "../../../db/index.js";
+import { oauthClients } from "../../../db/schema.js";
 import { Client } from "../entities/client.js";
 
 export class ClientRepository implements OAuthClientRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly db: Database) {}
 
   async getByIdentifier(clientId: string): Promise<Client> {
-    return new Client(
-      await this.prisma.oAuthClient.findUniqueOrThrow({
-        where: {
-          id: clientId,
-        },
-        include: {
-          scopes: true,
-        },
-      }),
-    );
+    const row = await this.db.query.oauthClients.findFirst({
+      where: eq(oauthClients.id, clientId),
+      with: { clientScopes: { with: { scope: true } } },
+    });
+
+    if (!row) {
+      // RFC 6749 invalid_client (401), and never echo the client_id into the
+      // response/logs. The library's validateClient() calls this with no catch, so
+      // a plain Error would surface as a 500 with the id leaked in the body.
+      throw OAuthException.invalidClient("Client has been revoked or is invalid.");
+    }
+
+    return new Client({
+      ...row,
+      scopes: row.clientScopes.map(cs => cs.scope),
+    });
   }
 
   async isClientValid(
@@ -27,7 +36,6 @@ export class ClientRepository implements OAuthClientRepository {
     if (client.secret && client.secret !== clientSecret) {
       return false;
     }
-    // @todo this is returning false, and it is a really bad error that is not helpful
     return client.allowedGrants.includes(grantType);
   }
 }

@@ -1,22 +1,24 @@
-import {
-  OAuthToken as TokenModel,
-  OAuthScope as ScopeModel,
-  OAuthClient as ClientModel,
-  User as UserModel,
-} from "@prisma/client";
-import { OAuthToken } from "@jmondi/oauth2-server";
+import { oauthTokens, oauthScopes, oauthClients, users } from "../../../db/schema.js";
+import type { OAuthToken } from "@jmondi/oauth2-server";
 
 import { Client } from "./client.js";
 import { Scope } from "./scope.js";
 import { User } from "./user.js";
+
+type TokenModel = typeof oauthTokens.$inferSelect;
+type ScopeModel = typeof oauthScopes.$inferSelect;
+type ClientModel = typeof oauthClients.$inferSelect;
+type UserModel = typeof users.$inferSelect;
 
 type Relations = Partial<{
   user: UserModel | null;
   scopes: ScopeModel[] | null;
 }>;
 
-type Required = {
-  client: ClientModel;
+type WithClient = {
+  // A raw client row (from a relational query) or an already-built Client entity
+  // (from issueToken); the constructor wraps either via `new Client(...)`.
+  client: ClientModel | Client;
 };
 
 export class Token implements TokenModel, OAuthToken {
@@ -32,7 +34,7 @@ export class Token implements TokenModel, OAuthToken {
   updatedAt: Date | null;
   createdAt: Date;
 
-  constructor({ client, user, scopes, ...entity }: TokenModel & Required & Relations) {
+  constructor({ client, user, scopes, ...entity }: TokenModel & WithClient & Relations) {
     this.accessToken = entity.accessToken;
     this.accessTokenExpiresAt = entity.accessTokenExpiresAt;
     this.refreshToken = entity.refreshToken;
@@ -42,11 +44,14 @@ export class Token implements TokenModel, OAuthToken {
     this.client = new Client(client);
     this.clientId = entity.clientId;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.createdAt = entity.createdAt ?? new Date();
-    this.updatedAt = entity.updatedAt ?? null;
+    this.createdAt = entity.createdAt;
+    this.updatedAt = entity.updatedAt;
   }
 
-  get isRevoked() {
+  // Named isExpired (not isRevoked): the OAuthToken interface declares no such
+  // member, so the library never calls this. It exists for our own repository's
+  // isAccessTokenRevoked, where revocation is modeled as force-expiry by revoke().
+  get isExpired() {
     return Date.now() > this.accessTokenExpiresAt.getTime();
   }
 

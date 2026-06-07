@@ -1,0 +1,31 @@
+import { createMiddleware } from "hono/factory";
+import { getCookie } from "hono/cookie";
+
+import type { User } from "./entities/user.js";
+import { userRepository } from "../../container.js";
+import { NotFoundError } from "./repositories/user_repository.js";
+import { verifySession } from "../../lib/session.js";
+
+// Shared shape of the Hono context variables, referenced by both the app's
+// `new Hono<AppEnv>()` and this middleware so `c.get/c.set("user")` can't drift.
+export type AppEnv = { Variables: { user?: User } };
+
+export const currentUser = createMiddleware<AppEnv>(async (c, next) => {
+  const jid = getCookie(c, "jid");
+  if (!jid) return next();
+
+  // verifySession checks the session-only HS256 secret AND asserts typ:"session",
+  // so an OIDC id_token can never stand in for a browser session here. The demo's
+  // session is non-revocable (no tokenVersion check) — it expires only by its exp.
+  const userId = await verifySession(jid);
+  if (!userId) return next();
+
+  try {
+    c.set("user", await userRepository.getUserByCredentials(userId));
+  } catch (e) {
+    // A deleted/unknown user just means "not logged in"; any other error (e.g. the
+    // DB being down) is real and must surface, not silently become anonymous.
+    if (!(e instanceof NotFoundError)) throw e;
+  }
+  return next();
+});
