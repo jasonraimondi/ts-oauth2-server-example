@@ -127,7 +127,7 @@ describe("confidential client positive flow (ITEM F)", () => {
       // links) so the temp client has no FK referrers, then remove the client
       // and its client-scope link — restoring the seeded-state invariant.
       await db.execute(
-        sql`TRUNCATE "oauthTokenScopes", "oauthAuthCodeScopes", "oauthTokens", "oauthAuthCodes" RESTART IDENTITY CASCADE;`,
+        sql`TRUNCATE "oauth_token_scopes", "oauth_auth_code_scopes", "oauth_tokens", "oauth_auth_codes" RESTART IDENTITY CASCADE;`,
       );
       await db.delete(oauthClientScopes).where(eq(oauthClientScopes.clientId, tempId));
       await db.delete(oauthClients).where(eq(oauthClients.id, tempId));

@@ -15,8 +15,10 @@ type Relations = Partial<{
   scopes: ScopeModel[] | null;
 }>;
 
-type Required = {
-  client: ClientModel;
+type WithClient = {
+  // A raw client row (from a relational query) or an already-built Client entity
+  // (from issueToken); the constructor wraps either via `new Client(...)`.
+  client: ClientModel | Client;
 };
 
 export class Token implements TokenModel, OAuthToken {
@@ -32,7 +34,7 @@ export class Token implements TokenModel, OAuthToken {
   updatedAt: Date | null;
   createdAt: Date;
 
-  constructor({ client, user, scopes, ...entity }: TokenModel & Required & Relations) {
+  constructor({ client, user, scopes, ...entity }: TokenModel & WithClient & Relations) {
     this.accessToken = entity.accessToken;
     this.accessTokenExpiresAt = entity.accessTokenExpiresAt;
     this.refreshToken = entity.refreshToken;
@@ -42,8 +44,8 @@ export class Token implements TokenModel, OAuthToken {
     this.client = new Client(client);
     this.clientId = entity.clientId;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.createdAt = entity.createdAt ?? new Date();
-    this.updatedAt = entity.updatedAt ?? null;
+    this.createdAt = entity.createdAt;
+    this.updatedAt = entity.updatedAt;
   }
 
   // Named isExpired (not isRevoked): the OAuthToken interface declares no such

@@ -25,11 +25,11 @@ export class Client implements ClientModel, OAuthClient {
   constructor({ scopes, ...entity }: ClientModel & Partial<Relations>) {
     this.id = entity.id;
     this.name = entity.name;
-    this.secret = entity.secret ?? null;
+    this.secret = entity.secret;
     this.redirectUris = entity.redirectUris;
     this.allowedGrants = entity.allowedGrants;
     this.scopes = scopes?.map(s => new Scope(s)) ?? [];
-    this.createdAt = entity.createdAt ?? new Date();
-    this.updatedAt = entity.updatedAt ?? null;
+    this.createdAt = entity.createdAt;
+    this.updatedAt = entity.updatedAt;
   }
 }

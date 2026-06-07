@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { OAuthException } from "@jmondi/oauth2-server";
 import type { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
@@ -15,7 +16,10 @@ export class ClientRepository implements OAuthClientRepository {
     });
 
     if (!row) {
-      throw new Error(`oauth client not found for identifier ${clientId}`);
+      // RFC 6749 invalid_client (401), and never echo the client_id into the
+      // response/logs. The library's validateClient() calls this with no catch, so
+      // a plain Error would surface as a 500 with the id leaked in the body.
+      throw OAuthException.invalidClient("Client has been revoked or is invalid.");
     }
 
     return new Client({

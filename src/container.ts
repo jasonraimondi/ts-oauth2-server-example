@@ -5,7 +5,7 @@ import { AuthorizationServer, DateInterval, OAuthException } from "@jmondi/oauth
 import { db } from "./db/index.js";
 import { ClientRepository } from "./app/oauth/repositories/client_repository.js";
 import { ScopeRepository } from "./app/oauth/repositories/scope_repository.js";
-import { UserRepository } from "./app/oauth/repositories/user_repository.js";
+import { UserRepository, NotFoundError } from "./app/oauth/repositories/user_repository.js";
 import { AuthCodeRepository } from "./app/oauth/repositories/auth_code_repository.js";
 import { TokenRepository } from "./app/oauth/repositories/token_repository.js";
 import { MyCustomJwtService } from "./app/oauth/services/custom_jwt_service.js";
@@ -38,8 +38,13 @@ const authorizationServer = new AuthorizationServer(
       // granted scopes (email -> email, profile -> name) before serving /userinfo.
       getUserClaims: async subject => {
         // If the subject no longer exists, surface an RFC 6750 invalid_token so
-        // /userinfo answers 401 (not a raw 500 from the repo's plain Error).
-        const user = await userRepository.getUserByCredentials(subject).catch(() => undefined);
+        // /userinfo answers 401. Only a genuinely-missing user is swallowed — any
+        // other failure (e.g. the DB being down) propagates instead of masquerading
+        // as "user no longer exists".
+        const user = await userRepository.getUserByCredentials(subject).catch((e: unknown) => {
+          if (e instanceof NotFoundError) return undefined;
+          throw e;
+        });
         if (!user) throw OAuthException.invalidToken("The user no longer exists");
         return { sub: subject, email: user.email, name: user.name ?? undefined };
       },

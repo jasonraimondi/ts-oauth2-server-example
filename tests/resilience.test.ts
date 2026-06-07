@@ -222,3 +222,56 @@ describe("resilience: OAuthException maps through the bridge for token AND revok
     }
   });
 });
+
+describe("resilience: unknown credentials map to typed OAuth errors (not 500, no secret echoed)", () => {
+  it("maps an unknown client_id to a 4xx invalid_client without echoing the id", async () => {
+    // validateClient -> ClientRepository.getByIdentifier finds nothing. The library
+    // calls it with no catch, so a plain Error would 500 with the id in the body.
+    const bogusClientId = "99999999-9999-9999-9999-999999999999";
+    const res = await postToken({
+      grant_type: "authorization_code",
+      client_id: bogusClientId,
+      redirect_uri: REDIRECT,
+      code: "anything",
+      code_verifier: "x",
+    });
+
+    expect(res.status).not.toBe(500);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+
+    const raw = await res.text();
+    expect(raw).not.toContain(bogusClientId); // the client_id must not leak into the body
+    expect(JSON.parse(raw).error).toEqual(expect.any(String));
+  });
+
+  it("maps an unknown refresh token to a 4xx OAuth error (not a 500)", async () => {
+    const { verifier, challenge } = pkce();
+    const code = await mintCode(challenge, "unknown-refresh");
+    const tokenRes = await postToken({
+      grant_type: "authorization_code",
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT,
+      code,
+      code_verifier: verifier,
+    });
+    const { refresh_token } = await tokenRes.json();
+    expect(refresh_token).toEqual(expect.any(String));
+
+    // Delete the stored token row so the (still-valid) refresh-token JWT resolves
+    // to a missing row, exercising getByRefreshToken's not-found path — which used
+    // to throw a plain Error and surface as a 500 with the token value leaked.
+    await db.delete(oauthTokens);
+
+    const res = await postToken({
+      grant_type: "refresh_token",
+      client_id: CLIENT_ID,
+      refresh_token,
+    });
+
+    expect(res.status).not.toBe(500);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect((await res.json()).error).toEqual(expect.any(String));
+  });
+});

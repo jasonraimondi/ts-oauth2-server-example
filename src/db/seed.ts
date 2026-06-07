@@ -34,7 +34,7 @@ export async function seed(database: typeof db = db): Promise<void> {
       id: CLIENT_ID,
       name: "Sample Client",
       secret: null,
-      allowedGrants: ["authorization_code", "client_credentials", "refresh_token"],
+      allowedGrants: ["authorization_code", "refresh_token"],
       redirectUris: ["http://localhost:5173/callback"],
     })
     .onConflictDoNothing({ target: oauthClients.id });

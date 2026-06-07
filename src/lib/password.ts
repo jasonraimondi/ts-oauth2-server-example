@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 
-export class InvalidAuthorizationError extends Error {}
+export class InvalidAuthorizationError extends Error {
+  name = "InvalidAuthorizationError";
+}
 
 export async function setPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, 12);
