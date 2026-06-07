@@ -29,6 +29,6 @@
   },
   "type": "module",
   "dependencies": {
-    "wretch": "^2.6.0"
+    "wretch": "^3.0.8"
   }
 }
