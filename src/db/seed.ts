@@ -1,9 +1,8 @@
 import { pathToFileURL } from "node:url";
 
-import bcryptjs from "bcryptjs";
-
 import { db } from "./index.js";
 import { oauthClients, oauthClientScopes, oauthScopes, users } from "./schema.js";
+import { setPassword } from "../lib/password.js";
 
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
@@ -15,7 +14,8 @@ const SCOPE_EMAIL_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6072";
 const SCOPE_PROFILE_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6073";
 
 export async function seed(database: typeof db = db): Promise<void> {
-  const passwordHash = await bcryptjs.hash("password123", 10);
+  // Hash via the same helper the app uses, so the bcrypt cost factor lives in one place.
+  const passwordHash = await setPassword("password123");
 
   await database
     .insert(users)

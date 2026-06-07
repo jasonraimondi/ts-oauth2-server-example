@@ -52,13 +52,6 @@ authorizationServer.enableGrantTypes(
   [{ grant: "authorization_code", authCodeRepository, userRepository }, new DateInterval("1h")],
 );
 
-export {
-  authorizationServer,
-  db,
-  jwt,
-  clientRepository,
-  tokenRepository,
-  scopeRepository,
-  authCodeRepository,
-  userRepository,
-};
+// Only the handles other modules actually consume are exported; the repositories
+// are wired into the AuthorizationServer above and don't need to leak out.
+export { authorizationServer, db, jwt, userRepository };
