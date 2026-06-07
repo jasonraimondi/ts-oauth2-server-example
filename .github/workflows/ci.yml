@@ -22,9 +22,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      # Used by `db:migrate`; the Vitest suite reads tests/.env.test (oauth_test db).
-      DATABASE_URL: postgresql://oauth:secret@localhost:8888/oauth_example
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,7 +32,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # DATABASE_URL is scoped to THIS step only — it must not leak into the test
+      # step, where globalSetup reads process.env.DATABASE_URL for the oauth_test db
+      # (dotenv won't override an already-set var, so a leaked value breaks setup).
       - run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://oauth:secret@localhost:8888/oauth_example
       - run: pnpm build # tsc --noEmit (type-check)
       - run: pnpm lint
       - run: pnpm format:check
