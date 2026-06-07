@@ -16,17 +16,17 @@ The OAuth2 HTTP endpoints bridge Hono's Fetch `Request`/`Response` to the packag
 
 ## Endpoints
 
-| Route | Purpose |
-| --- | --- |
-| `POST /api/oauth2/token` | token endpoint (authorization_code, refresh_token) |
-| `POST /api/oauth2/revoke` | token revocation |
-| `GET /api/oauth2/authorize` | starts the flow; redirects to login or consent (never auto-approves) |
-| `GET/POST /api/login` | server-rendered login form + session cookie |
-| `GET/POST /api/scopes` | server-rendered **consent** form; `POST` completes or denies the request |
-| `POST /api/logout` | clears the session cookie |
-| `GET/POST /api/oauth2/userinfo` | OIDC userinfo (bearer-authenticated, scope-filtered) |
-| `GET /.well-known/openid-configuration` | OIDC discovery document |
-| `GET /.well-known/jwks.json` | public signing key (JWKS) |
+| Route                                   | Purpose                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `POST /api/oauth2/token`                | token endpoint (authorization_code, refresh_token)                       |
+| `POST /api/oauth2/revoke`               | token revocation                                                         |
+| `GET /api/oauth2/authorize`             | starts the flow; redirects to login or consent (never auto-approves)     |
+| `GET/POST /api/login`                   | server-rendered login form + session cookie                              |
+| `GET/POST /api/scopes`                  | server-rendered **consent** form; `POST` completes or denies the request |
+| `POST /api/logout`                      | clears the session cookie                                                |
+| `GET/POST /api/oauth2/userinfo`         | OIDC userinfo (bearer-authenticated, scope-filtered)                     |
+| `GET /.well-known/openid-configuration` | OIDC discovery document                                                  |
+| `GET /.well-known/jwks.json`            | public signing key (JWKS)                                                |
 
 ## OpenID Connect
 
@@ -136,7 +136,7 @@ This repo optimizes for being readable and runnable on `localhost`. Before shipp
 - **Session cookie `Secure`** — gated to `NODE_ENV === "production"` here so the demo works over plain `http://localhost`. Production must serve over HTTPS with `Secure` on.
 - **`SESSION_SECRET`** — the browser session cookie (`jid`) is an HS256 JWT signed with a secret that is deliberately **separate** from the OIDC RSA key (different trust domains). A hardcoded insecure default is used if unset (with a warning) — set a long random `SESSION_SECRET` in production.
 - **`OIDC_PRIVATE_KEY`** — set a stable PEM so issued tokens survive restarts; otherwise an ephemeral key is generated at boot.
-- **Browser token storage** — the SPA stores the **refresh token** in a JS-readable cookie *for demo visibility only*. That is an XSS → token-theft (account-takeover) vector. A production browser app should not hold the refresh token at all; use a Backend-for-Frontend (BFF) that keeps it server-side behind a `Secure; HttpOnly; SameSite` cookie. This is called out in `web/src/lib/browser_storage.ts`.
+- **Browser token storage** — the SPA stores the **refresh token** in a JS-readable cookie _for demo visibility only_. That is an XSS → token-theft (account-takeover) vector. A production browser app should not hold the refresh token at all; use a Backend-for-Frontend (BFF) that keeps it server-side behind a `Secure; HttpOnly; SameSite` cookie. This is called out in `web/src/lib/browser_storage.ts`.
 - **Trusted proxy** — `lastLoginIP` is read from `X-Forwarded-For`, which is client-spoofable unless a trusted reverse proxy sets it.
 - **Consent persistence** — this demo asks for consent on every authorization; a real OP typically remembers prior grants per user+client.
 

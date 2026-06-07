@@ -36,12 +36,10 @@ const authorizationServer = new AuthorizationServer(
       jwksUri: `${issuer}/.well-known/jwks.json`,
       // Return only attributes we actually store; the library filters them by the
       // granted scopes (email -> email, profile -> name) before serving /userinfo.
-      getUserClaims: async (subject) => {
+      getUserClaims: async subject => {
         // If the subject no longer exists, surface an RFC 6750 invalid_token so
         // /userinfo answers 401 (not a raw 500 from the repo's plain Error).
-        const user = await userRepository
-          .getUserByCredentials(subject)
-          .catch(() => undefined);
+        const user = await userRepository.getUserByCredentials(subject).catch(() => undefined);
         if (!user) throw OAuthException.invalidToken("The user no longer exists");
         return { sub: subject, email: user.email, name: user.name ?? undefined };
       },

@@ -22,7 +22,9 @@ function authorizeQuery(): string {
 
 describe("GET /api/oauth2/authorize", () => {
   it("redirects to /api/login with the original query when there is no session", async () => {
-    const res = await app.request(`/api/oauth2/authorize?${authorizeQuery()}`, { redirect: "manual" });
+    const res = await app.request(`/api/oauth2/authorize?${authorizeQuery()}`, {
+      redirect: "manual",
+    });
 
     expect(res.status).toBe(302);
     const location = res.headers.get("location")!;

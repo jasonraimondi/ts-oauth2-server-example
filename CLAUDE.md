@@ -1,9 +1,11 @@
 # Claude Development Notes
 
 ## Project Overview
+
 TypeScript OAuth2 server example implementation using a Hono server and a SvelteKit client. This demonstrates real-world usage of the @jmondi/oauth2-server package.
 
 ## Development Setup
+
 ```bash
 # Install dependencies (the web client is a standalone pnpm project)
 pnpm install
@@ -21,6 +23,7 @@ overmind start  # or foreman start
 ```
 
 ## Available Scripts
+
 - `pnpm dev` - Start server in watch mode (tsx)
 - `pnpm build` - Type-check / compile with tsc
 - `pnpm test` - Run the Vitest suite
@@ -30,6 +33,7 @@ overmind start  # or foreman start
 - `pnpm format` - Format code with Prettier
 
 ## Project Structure
+
 - `/src` - Hono server application
   - `index.ts` - `@hono/node-server` entry point (serves on port 3000)
   - `app.tsx` - Hono routes + middleware (logger, currentUser, CSRF)
@@ -42,6 +46,7 @@ overmind start  # or foreman start
 - `/tests` - Vitest integration tests
 
 ## Key Components
+
 - OAuth2 authorization server implementation
 - User authentication and management
 - Client registration and management
@@ -55,12 +60,14 @@ overmind start  # or foreman start
 - Fetch `Request`/`Response` bridged to the package via the `@jmondi/oauth2-server/vanilla` adapter
 
 ## Database
+
 - PostgreSQL in Docker; image pinned to `postgres:17` (the unpinned tag broke on the v18 data-dir change)
 - Drizzle ORM (postgres.js driver); dev role/db are `oauth` / `oauth_example`, tests use `oauth_test`
 - The connection string has no `?schema=public` cruft (no `.replace` strips)
 - Migrations in `/drizzle`
 
 ## Development Notes
+
 - Server runs on port 3000 with all routes under the `/api` prefix
 - Web client runs separately via SvelteKit (Svelte 5); the access token is kept in memory (cleared on reload)
 - Uses ESM modules (`"type": "module"`)

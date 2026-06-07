@@ -10,7 +10,11 @@ import bcrypt from "bcryptjs";
 import { html } from "hono/html";
 import { HTTPException } from "hono/http-exception";
 
-import { requestFromVanilla, responseToVanilla, handleVanillaError } from "@jmondi/oauth2-server/vanilla";
+import {
+  requestFromVanilla,
+  responseToVanilla,
+  handleVanillaError,
+} from "@jmondi/oauth2-server/vanilla";
 
 import { authorizationServer, db } from "./container.js";
 import { users } from "./db/schema.js";
@@ -41,19 +45,19 @@ app.use(currentUser);
 // OAuthExceptions to their RFC body shape and wraps anything else into a proper
 // OAuth internalServerError, so the pure OAuth routes can just throw. Hono's own
 // HTTPException (e.g. the csrf() 403) carries its own Response — honor it as-is.
-app.onError((err) => {
+app.onError(err => {
   if (err instanceof HTTPException) return err.getResponse();
   return responseToVanilla(handleVanillaError(err));
 });
 
-app.get("/api/ping", (c) => c.text("pong"));
+app.get("/api/ping", c => c.text("pong"));
 
-app.post("/api/oauth2/token", async (c) => {
+app.post("/api/oauth2/token", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
   return responseToVanilla(await authorizationServer.respondToAccessTokenRequest(oauthReq));
 });
 
-app.post("/api/oauth2/revoke", async (c) => {
+app.post("/api/oauth2/revoke", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
   return responseToVanilla(await authorizationServer.revoke(oauthReq));
 });
@@ -68,12 +72,12 @@ app.get("/.well-known/jwks.json", () => responseToVanilla(authorizationServer.jw
 
 // OIDC userinfo: bearer-authenticated, returns scope-filtered claims (RFC 6750
 // errors on a missing/invalid token). Accepts the token via header, form, or query.
-app.on(["GET", "POST"], "/api/oauth2/userinfo", async (c) => {
+app.on(["GET", "POST"], "/api/oauth2/userinfo", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
   return responseToVanilla(await authorizationServer.userInfo(oauthReq));
 });
 
-app.get("/api/oauth2/authorize", async (c) => {
+app.get("/api/oauth2/authorize", async c => {
   // Validate up front so a malformed authorize request fails before we send the
   // user through login/consent. With a session, route to the consent screen
   // (carrying the original query); without one, to login. We never auto-approve.
@@ -89,15 +93,17 @@ app.get("/api/oauth2/authorize", async (c) => {
 app.use("/api/login", csrf());
 app.use("/api/scopes", csrf());
 
-app.get("/api/login", async (c) => {
+app.get("/api/login", async c => {
   await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-  return c.html(html`<!doctype html>${(<Login action={"/api/login" + new URL(c.req.url).search} />)}`);
+  return c.html(
+    html`<!DOCTYPE html>${(<Login action={"/api/login" + new URL(c.req.url).search} />)}`,
+  );
 });
 
 app.post(
   "/api/login",
   zValidator("form", z.object({ email: z.email(), password: z.string() })),
-  async (c) => {
+  async c => {
     // Validate the authorize params from the QUERY only; building a body-less
     // request avoids consuming the form body that zValidator already parsed.
     await authorizationServer.validateAuthorizationRequest(
@@ -145,27 +151,27 @@ app.post(
 
 // Clears the session cookie. The session is a stateless JWT, so logout is just
 // dropping the cookie client-side (no server-side revocation in this demo).
-app.post("/api/logout", (c) => {
+app.post("/api/logout", c => {
   deleteCookie(c, "jid");
   return c.text("Logged out");
 });
 
-app.get("/api/scopes", async (c) => {
+app.get("/api/scopes", async c => {
   const authRequest = await authorizationServer.validateAuthorizationRequest(
     await requestFromVanilla(c.req.raw),
   );
   return c.html(
-    html`<!doctype html>${(
-      <Scopes
-        action={"/api/scopes" + new URL(c.req.url).search}
-        client={authRequest.client}
-        scopes={authRequest.scopes}
-      />
-    )}`,
+    html`<!DOCTYPE html>${(
+        <Scopes
+          action={"/api/scopes" + new URL(c.req.url).search}
+          client={authRequest.client}
+          scopes={authRequest.scopes}
+        />
+      )}`,
   );
 });
 
-app.post("/api/scopes", async (c) => {
+app.post("/api/scopes", async c => {
   // Re-validate from the QUERY (the consent decision arrives in the form body).
   const authRequest = await authorizationServer.validateAuthorizationRequest(
     await requestFromVanilla(new Request(c.req.url)),

@@ -16,7 +16,7 @@ export const Scopes: FC<{ action: string; client: OAuthClient; scopes: OAuthScop
         <>
           <p>Do you authorize {client.name} to access the following scopes?</p>
           <ul>
-            {scopes.map((scope) => (
+            {scopes.map(scope => (
               <li>{scope.description ?? scope.name}</li>
             ))}
           </ul>

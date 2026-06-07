@@ -8,7 +8,10 @@ const USER_ID = SEEDED_USER_ID;
 const REDIRECT = "http://localhost:5173/callback";
 const ISSUER = "http://localhost:3000";
 
-function decodeJwt(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
+function decodeJwt(token: string): {
+  header: Record<string, unknown>;
+  payload: Record<string, unknown>;
+} {
   const [header, payload] = token.split(".");
   return {
     header: JSON.parse(Buffer.from(header, "base64url").toString("utf8")),
