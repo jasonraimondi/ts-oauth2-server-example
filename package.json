@@ -33,7 +33,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.19.19",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^9.18.0",
+    "eslint": "^10.4.1",
     "prettier": "^3.4.2",
     "tsx": "^4.22.4",
     "typescript": "^5.9.2",
