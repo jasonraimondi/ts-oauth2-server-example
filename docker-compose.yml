@@ -1,11 +1,9 @@
-version: "3.7"
-
 services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: prismadb
-      POSTGRES_USER: prisma
+      POSTGRES_DB: oauth_example
+      POSTGRES_USER: oauth
       POSTGRES_PASSWORD: secret
       TZ: UTC
       PGTZ: UTC

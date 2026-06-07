@@ -11,7 +11,7 @@ config({ path: "tests/.env.test" });
 const TEST_DB = "oauth_test";
 
 export default async function globalSetup(): Promise<void> {
-  const testUrl = process.env.DATABASE_URL!.replace(/\?schema=public$/, "");
+  const testUrl = process.env.DATABASE_URL!;
   const maintenanceUrl = testUrl.replace(/\/[^/]+$/, "/postgres");
 
   const admin = postgres(maintenanceUrl, { max: 1 });
