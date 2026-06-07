@@ -5,7 +5,7 @@ import { db } from "../../src/db/index.js";
 
 export async function truncateDynamic(database: typeof db = db): Promise<void> {
   await database.execute(
-    sql`TRUNCATE "oauthTokenScopes", "oauthAuthCodeScopes", "oauthTokens", "oauthAuthCodes" RESTART IDENTITY CASCADE;`,
+    sql`TRUNCATE "oauth_token_scopes", "oauth_auth_code_scopes", "oauth_tokens", "oauth_auth_codes" RESTART IDENTITY CASCADE;`,
   );
 }
 

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { DateInterval, generateRandomToken } from "@jmondi/oauth2-server";
+import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
 import type { OAuthClient, OAuthTokenRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
@@ -30,7 +30,9 @@ export class TokenRepository implements OAuthTokenRepository {
     });
 
     if (!row) {
-      throw new Error(`oauth token not found for access token ${accessToken}`);
+      // RFC 6750 invalid_token, with no token value echoed. (The library guards the
+      // revoke/userinfo paths that call this, but stay typed and leak-free anyway.)
+      throw OAuthException.invalidToken("The access token is invalid.");
     }
 
     return new Token({
@@ -53,7 +55,7 @@ export class TokenRepository implements OAuthTokenRepository {
       accessTokenExpiresAt: new DateInterval("1h").getEndDate(),
       refreshToken: null,
       refreshTokenExpiresAt: null,
-      client: client as unknown as ConstructorParameters<typeof Token>[0]["client"],
+      client,
       clientId: client.id,
       user: user ?? null,
       userId: user?.id ?? null,
@@ -74,7 +76,10 @@ export class TokenRepository implements OAuthTokenRepository {
     });
 
     if (!row) {
-      throw new Error(`oauth token not found for refresh token ${refreshToken}`);
+      // RFC 6749 invalid_grant (400) for an unknown refresh token, with no token
+      // value echoed. The refresh grant resolves tokens via this method with no
+      // catch, so a plain Error would surface as a 500 leaking the token.
+      throw OAuthException.invalidGrant("The refresh token is invalid or has expired.");
     }
 
     return new Token({
@@ -84,7 +89,9 @@ export class TokenRepository implements OAuthTokenRepository {
   }
 
   async isRefreshTokenRevoked(token: Token): Promise<boolean> {
-    return Date.now() > (token.refreshTokenExpiresAt?.getTime() ?? 0);
+    // No expiry means there is no live refresh token, so treat it as revoked.
+    if (!token.refreshTokenExpiresAt) return true;
+    return Date.now() > token.refreshTokenExpiresAt.getTime();
   }
 
   async issueRefreshToken(token: Token, _client: OAuthClient): Promise<Token> {
@@ -104,19 +111,18 @@ export class TokenRepository implements OAuthTokenRepository {
 
   async persist({ user, client, scopes, ...token }: Token): Promise<void> {
     await this.db.transaction(async tx => {
-      await tx
-        .insert(oauthTokens)
-        .values({
-          accessToken: token.accessToken,
-          accessTokenExpiresAt: token.accessTokenExpiresAt,
-          refreshToken: token.refreshToken,
-          refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-          clientId: token.clientId,
-          userId: token.userId,
-          createdAt: token.createdAt,
-          updatedAt: token.updatedAt,
-        })
-        .onConflictDoNothing();
+      // No onConflictDoNothing: the access token is freshly random, so a primary-key
+      // collision is a real bug and should surface rather than be silently dropped.
+      await tx.insert(oauthTokens).values({
+        accessToken: token.accessToken,
+        accessTokenExpiresAt: token.accessTokenExpiresAt,
+        refreshToken: token.refreshToken,
+        refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+        clientId: token.clientId,
+        userId: token.userId,
+        createdAt: token.createdAt,
+        updatedAt: token.updatedAt,
+      });
 
       if (scopes.length > 0) {
         await tx

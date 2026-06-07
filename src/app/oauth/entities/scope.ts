@@ -12,8 +12,7 @@ export class Scope implements ScopeModel, OAuthScope {
   constructor(entity: ScopeModel) {
     this.id = entity.id;
     this.name = entity.name;
-
-    this.createdAt = entity.createdAt ?? new Date();
-    this.updatedAt = entity.updatedAt ?? null;
+    this.createdAt = entity.createdAt;
+    this.updatedAt = entity.updatedAt;
   }
 }

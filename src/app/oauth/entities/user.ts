@@ -8,7 +8,7 @@ export class User implements UserModel, OAuthUser {
   email: string;
   name: string | null;
   passwordHash: string | null;
-  tokenVersion = 0;
+  tokenVersion: number;
   lastLoginAt: Date | null;
   lastLoginIP: string | null;
   createdIP: string;

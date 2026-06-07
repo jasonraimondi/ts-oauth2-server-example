@@ -7,6 +7,13 @@ import { Client } from "../entities/client.js";
 import { User } from "../entities/user.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "../../../lib/password.js";
 
+// Thrown only when no user matches — distinct from a real DB failure, so callers
+// can degrade gracefully on "no such user" while letting infrastructure errors
+// surface instead of silently swallowing them.
+export class NotFoundError extends Error {
+  name = "NotFoundError";
+}
+
 export class UserRepository implements OAuthUserRepository {
   constructor(private readonly db: Database) {}
 
@@ -21,7 +28,7 @@ export class UserRepository implements OAuthUserRepository {
     });
 
     if (!row) {
-      throw new Error(`user not found for identifier ${identifier}`);
+      throw new NotFoundError("user not found");
     }
 
     const user = new User(row);

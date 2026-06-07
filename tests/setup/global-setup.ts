@@ -26,7 +26,7 @@ export default async function globalSetup(): Promise<void> {
 
   const client = postgres(testUrl, { max: 1, onnotice: () => {} });
   try {
-    const testDb = drizzle(client, { schema });
+    const testDb = drizzle(client, { schema, casing: "snake_case" });
     await migrate(testDb, { migrationsFolder: "./drizzle" });
     await seed(testDb);
   } finally {

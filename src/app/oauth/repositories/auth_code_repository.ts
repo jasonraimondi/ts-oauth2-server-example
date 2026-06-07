@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { DateInterval, generateRandomToken } from "@jmondi/oauth2-server";
+import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
 import type { OAuthAuthCode, OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
@@ -22,7 +22,10 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
     });
 
     if (!row) {
-      throw new Error(`oauth auth code not found for identifier ${authCodeCode}`);
+      // RFC 6749 invalid_grant (400) for an unknown/replayed code, with no code
+      // value echoed. The library resolves codes via this method with no catch, so
+      // a plain Error would surface as a 500 leaking the code in the body.
+      throw OAuthException.invalidGrant("The authorization code is invalid or has expired.");
     }
 
     return new AuthCode({
@@ -46,7 +49,7 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       authTime: null,
       maxAge: null,
       expiresAt: new DateInterval("15m").getEndDate(),
-      client: client as unknown as ConstructorParameters<typeof AuthCode>[0]["client"],
+      client,
       clientId: client.id,
       user,
       userId: user?.id ?? null,

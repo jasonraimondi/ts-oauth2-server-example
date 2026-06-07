@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const grantTypes = pgEnum("GrantTypes", [
+export const grantTypes = pgEnum("grant_types", [
   "client_credentials",
   "authorization_code",
   "refresh_token",
@@ -20,118 +20,112 @@ export const grantTypes = pgEnum("GrantTypes", [
   "password",
 ]);
 
-export const codeChallengeMethod = pgEnum("CodeChallengeMethod", ["S256", "plain"]);
+export const codeChallengeMethod = pgEnum("code_challenge_method", ["S256", "plain"]);
 
-export const users = pgTable(
-  "users",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    email: varchar("email", { length: 255 }).notNull().unique(),
-    name: varchar("name", { length: 255 }),
-    passwordHash: varchar("passwordHash", { length: 255 }),
-    tokenVersion: integer("tokenVersion").notNull().default(0),
-    lastLoginAt: timestamp("lastLoginAt", { precision: 6 }),
-    lastLoginIP: inet("lastLoginIP"),
-    createdIP: inet("createdIP").notNull(),
-    createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt"),
-  },
-  table => [index("idx_users_email").on(table.email)],
-);
+// Column DB names are derived from the camelCase keys by `casing: "snake_case"`
+// (set on the drizzle() client and in drizzle.config.ts), so `passwordHash`
+// becomes the `password_hash` column without spelling it out here.
+export const users = pgTable("users", {
+  id: uuid().primaryKey().defaultRandom(),
+  email: varchar({ length: 255 }).notNull().unique(),
+  name: varchar({ length: 255 }),
+  passwordHash: varchar({ length: 255 }),
+  tokenVersion: integer().notNull().default(0),
+  lastLoginAt: timestamp({ precision: 6 }),
+  lastLoginIP: inet(),
+  createdIP: inet().notNull(),
+  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+  updatedAt: timestamp(),
+});
 
-export const oauthClients = pgTable("oauthClients", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  secret: varchar("secret", { length: 255 }),
-  createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt"),
-  redirectUris: text("redirectUris").array().notNull(),
-  allowedGrants: grantTypes("allowedGrants").array().notNull(),
+export const oauthClients = pgTable("oauth_clients", {
+  id: uuid().primaryKey().defaultRandom(),
+  name: varchar({ length: 255 }).notNull(),
+  secret: varchar({ length: 255 }),
+  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+  updatedAt: timestamp(),
+  redirectUris: text().array().notNull(),
+  allowedGrants: grantTypes().array().notNull(),
 });
 
 export const oauthScopes = pgTable(
-  "oauthScopes",
+  "oauth_scopes",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    name: text("name").notNull(),
-    createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt"),
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    updatedAt: timestamp(),
   },
-  table => [index("idx_oauthscope_name").on(table.name)],
+  // `name` is looked up by value (getAllByIdentifiers) and is not unique, so it
+  // needs an explicit index — unlike the PK / unique columns, which already have one.
+  table => [index("idx_oauth_scopes_name").on(table.name)],
 );
 
-export const oauthAuthCodes = pgTable("oauthAuthCodes", {
-  code: text("code").primaryKey(),
-  redirectUri: text("redirectUri"),
-  codeChallenge: text("codeChallenge"),
-  codeChallengeMethod: codeChallengeMethod("codeChallengeMethod").notNull().default("plain"),
-  nonce: text("nonce"),
-  authTime: integer("authTime"),
-  maxAge: integer("maxAge"),
-  expiresAt: timestamp("expiresAt").notNull(),
-  createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt"),
-  userId: uuid("userId").references(() => users.id),
-  clientId: uuid("clientId")
+export const oauthAuthCodes = pgTable("oauth_auth_codes", {
+  code: text().primaryKey(),
+  redirectUri: text(),
+  codeChallenge: text(),
+  codeChallengeMethod: codeChallengeMethod().notNull().default("plain"),
+  nonce: text(),
+  authTime: integer(),
+  maxAge: integer(),
+  expiresAt: timestamp().notNull(),
+  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+  updatedAt: timestamp(),
+  userId: uuid().references(() => users.id, { onDelete: "set null" }),
+  clientId: uuid()
     .notNull()
-    .references(() => oauthClients.id),
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
 });
 
-export const oauthTokens = pgTable(
-  "oauthTokens",
-  {
-    accessToken: text("accessToken").primaryKey(),
-    accessTokenExpiresAt: timestamp("accessTokenExpiresAt").notNull(),
-    refreshToken: text("refreshToken").unique(),
-    refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
-    createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt"),
-    clientId: uuid("clientId")
-      .notNull()
-      .references(() => oauthClients.id),
-    userId: uuid("userId").references(() => users.id),
-  },
-  table => [
-    index("idx_oauthtoken_accesstoken").on(table.accessToken),
-    index("idx_oauthtoken_refreshtoken").on(table.refreshToken),
-  ],
-);
+export const oauthTokens = pgTable("oauth_tokens", {
+  accessToken: text().primaryKey(),
+  accessTokenExpiresAt: timestamp().notNull(),
+  refreshToken: text().unique(),
+  refreshTokenExpiresAt: timestamp(),
+  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+  updatedAt: timestamp(),
+  clientId: uuid()
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: uuid().references(() => users.id, { onDelete: "set null" }),
+});
 
 export const oauthClientScopes = pgTable(
-  "oauthClientScopes",
+  "oauth_client_scopes",
   {
-    clientId: uuid("clientId")
+    clientId: uuid()
       .notNull()
-      .references(() => oauthClients.id),
-    scopeId: uuid("scopeId")
+      .references(() => oauthClients.id, { onDelete: "cascade" }),
+    scopeId: uuid()
       .notNull()
-      .references(() => oauthScopes.id),
+      .references(() => oauthScopes.id, { onDelete: "cascade" }),
   },
   table => [primaryKey({ columns: [table.clientId, table.scopeId] })],
 );
 
 export const oauthAuthCodeScopes = pgTable(
-  "oauthAuthCodeScopes",
+  "oauth_auth_code_scopes",
   {
-    authCodeCode: text("authCodeCode")
+    authCodeCode: text()
       .notNull()
-      .references(() => oauthAuthCodes.code),
-    scopeId: uuid("scopeId")
+      .references(() => oauthAuthCodes.code, { onDelete: "cascade" }),
+    scopeId: uuid()
       .notNull()
-      .references(() => oauthScopes.id),
+      .references(() => oauthScopes.id, { onDelete: "cascade" }),
   },
   table => [primaryKey({ columns: [table.authCodeCode, table.scopeId] })],
 );
 
 export const oauthTokenScopes = pgTable(
-  "oauthTokenScopes",
+  "oauth_token_scopes",
   {
-    accessToken: text("accessToken")
+    accessToken: text()
       .notNull()
-      .references(() => oauthTokens.accessToken),
-    scopeId: uuid("scopeId")
+      .references(() => oauthTokens.accessToken, { onDelete: "cascade" }),
+    scopeId: uuid()
       .notNull()
-      .references(() => oauthScopes.id),
+      .references(() => oauthScopes.id, { onDelete: "cascade" }),
   },
   table => [primaryKey({ columns: [table.accessToken, table.scopeId] })],
 );
