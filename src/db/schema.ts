@@ -36,7 +36,7 @@ export const users = pgTable(
     createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt"),
   },
-  (table) => [index("idx_users_email").on(table.email)],
+  table => [index("idx_users_email").on(table.email)],
 );
 
 export const oauthClients = pgTable("oauthClients", {
@@ -57,7 +57,7 @@ export const oauthScopes = pgTable(
     createdAt: timestamp("createdAt", { precision: 6 }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt"),
   },
-  (table) => [index("idx_oauthscope_name").on(table.name)],
+  table => [index("idx_oauthscope_name").on(table.name)],
 );
 
 export const oauthAuthCodes = pgTable("oauthAuthCodes", {
@@ -91,7 +91,7 @@ export const oauthTokens = pgTable(
       .references(() => oauthClients.id),
     userId: uuid("userId").references(() => users.id),
   },
-  (table) => [
+  table => [
     index("idx_oauthtoken_accesstoken").on(table.accessToken),
     index("idx_oauthtoken_refreshtoken").on(table.refreshToken),
   ],
@@ -107,7 +107,7 @@ export const oauthClientScopes = pgTable(
       .notNull()
       .references(() => oauthScopes.id),
   },
-  (table) => [primaryKey({ columns: [table.clientId, table.scopeId] })],
+  table => [primaryKey({ columns: [table.clientId, table.scopeId] })],
 );
 
 export const oauthAuthCodeScopes = pgTable(
@@ -120,7 +120,7 @@ export const oauthAuthCodeScopes = pgTable(
       .notNull()
       .references(() => oauthScopes.id),
   },
-  (table) => [primaryKey({ columns: [table.authCodeCode, table.scopeId] })],
+  table => [primaryKey({ columns: [table.authCodeCode, table.scopeId] })],
 );
 
 export const oauthTokenScopes = pgTable(
@@ -133,7 +133,7 @@ export const oauthTokenScopes = pgTable(
       .notNull()
       .references(() => oauthScopes.id),
   },
-  (table) => [primaryKey({ columns: [table.accessToken, table.scopeId] })],
+  table => [primaryKey({ columns: [table.accessToken, table.scopeId] })],
 );
 
 export const usersRelations = relations(users, ({ many }) => ({
