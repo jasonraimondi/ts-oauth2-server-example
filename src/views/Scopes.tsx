@@ -12,28 +12,34 @@ export const Scopes: FC<{ action: string; client: OAuthClient; scopes: OAuthScop
 }) => (
   <Layout title="Authorize" styles={styles}>
     <div>
-      <p>Do you authorize this application {client.name} the following scopes:</p>
-      <ul>
-        {scopes.length > 0 ? (
-          scopes.map((scope) => <li>{scope.description ?? scope.name}</li>)
-        ) : (
-          <li>No scopes! Fix this empty state</li>
-        )}
-      </ul>
-      <ul class="yes-no">
-        <li>
-          <form action={action} method="post">
-            <input name="accept" value="yes" type="hidden" style="display: none;" />
-            <button>Yes</button>
-          </form>
-        </li>
-        <li>
-          <form action={action} method="post">
-            <input name="accept" value="no" type="hidden" style="display: none;" />
-            <button>No</button>
-          </form>
-        </li>
-      </ul>
+      {scopes.length > 0 ? (
+        <>
+          <p>Do you authorize {client.name} to access the following scopes?</p>
+          <ul>
+            {scopes.map((scope) => (
+              <li>{scope.description ?? scope.name}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>{client.name} is requesting access to your account but no scopes.</p>
+      )}
+      {/* One form, two named submit buttons: the clicked button's value tells the
+          server whether the user approved (yes) or denied (no) the request. */}
+      <form action={action} method="post">
+        <ul class="yes-no">
+          <li>
+            <button name="accept" value="yes" type="submit">
+              Approve
+            </button>
+          </li>
+          <li>
+            <button name="accept" value="no" type="submit">
+              Deny
+            </button>
+          </li>
+        </ul>
+      </form>
     </div>
   </Layout>
 );

@@ -1,23 +1,13 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { jwt, db } from "../src/container.js";
+import { db } from "../src/container.js";
 import { oauthClients, oauthAuthCodes, oauthTokens } from "../src/db/schema.js";
+import { codeFromApprove, mintJid, pkce } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
-const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
 const REDIRECT = "http://localhost:5173/callback";
-
-type Pkce = { verifier: string; challenge: string };
-
-function pkce(): Pkce {
-  const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  return { verifier, challenge };
-}
 
 function authorizeQuery(challenge: string, state: string): string {
   const scope = encodeURIComponent("contacts.read contacts.write");
@@ -28,19 +18,9 @@ function authorizeQuery(challenge: string, state: string): string {
   );
 }
 
-async function mintJid(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ userId: USER_ID, email: "jason@example.com", iat: now, exp: now + 3600 });
-}
-
-// Mint a real encrypted auth code by driving the authorize endpoint with a jid cookie.
+// Mint a real auth code by driving authorize -> consent (accept=yes).
 async function mintCode(challenge: string, state: string): Promise<string> {
-  const jid = await mintJid();
-  const res = await app.request(`/api/oauth2/authorize?${authorizeQuery(challenge, state)}`, {
-    headers: { Cookie: `jid=${jid}` },
-    redirect: "manual",
-  });
-  return new URL(res.headers.get("location")!).searchParams.get("code")!;
+  return codeFromApprove(authorizeQuery(challenge, state), await mintJid());
 }
 
 async function postToken(body: Record<string, string>): Promise<Response> {

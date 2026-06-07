@@ -1,22 +1,12 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { jwt } from "../src/container.js";
+import { codeFromApprove, mintJid, pkce, SEEDED_USER_ID } from "./helpers.js";
 
 const CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d"; // OIDC Demo Client
-const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
+const USER_ID = SEEDED_USER_ID;
 const REDIRECT = "http://localhost:5173/callback";
 const ISSUER = "http://localhost:3000";
-
-type Pkce = { verifier: string; challenge: string };
-
-function pkce(): Pkce {
-  const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  return { verifier, challenge };
-}
 
 function decodeJwt(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
   const [header, payload] = token.split(".");
@@ -24,11 +14,6 @@ function decodeJwt(token: string): { header: Record<string, unknown>; payload: R
     header: JSON.parse(Buffer.from(header, "base64url").toString("utf8")),
     payload: JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
   };
-}
-
-async function mintJid(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ userId: USER_ID, email: "jason@example.com", iat: now, exp: now + 3600 });
 }
 
 function openidAuthorizeQuery(challenge: string, state: string, nonce: string): string {
@@ -46,12 +31,8 @@ async function runOpenIdFlow(nonce: string): Promise<Record<string, any>> {
   const query = openidAuthorizeQuery(challenge, "oidc", nonce);
   const jid = await mintJid();
 
-  const authorizeRes = await app.request(`/api/oauth2/authorize?${query}`, {
-    headers: { Cookie: `jid=${jid}` },
-    redirect: "manual",
-  });
-  expect(authorizeRes.status).toBe(302);
-  const code = new URL(authorizeRes.headers.get("location")!).searchParams.get("code")!;
+  // authorize -> consent (accept=yes) -> callback with a code.
+  const code = await codeFromApprove(query, jid);
 
   const tokenRes = await app.request("/api/oauth2/token", {
     method: "POST",

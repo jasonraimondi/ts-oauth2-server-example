@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { AuthorizationServer, DateInterval } from "@jmondi/oauth2-server";
+import { AuthorizationServer, DateInterval, OAuthException } from "@jmondi/oauth2-server";
 
 import { db } from "./db/index.js";
 import { ClientRepository } from "./app/oauth/repositories/client_repository.js";
@@ -37,7 +37,12 @@ const authorizationServer = new AuthorizationServer(
       // Return only attributes we actually store; the library filters them by the
       // granted scopes (email -> email, profile -> name) before serving /userinfo.
       getUserClaims: async (subject) => {
-        const user = await userRepository.getUserByCredentials(subject);
+        // If the subject no longer exists, surface an RFC 6750 invalid_token so
+        // /userinfo answers 401 (not a raw 500 from the repo's plain Error).
+        const user = await userRepository
+          .getUserByCredentials(subject)
+          .catch(() => undefined);
+        if (!user) throw OAuthException.invalidToken("The user no longer exists");
         return { sub: subject, email: user.email, name: user.name ?? undefined };
       },
     },
