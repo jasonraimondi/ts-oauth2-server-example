@@ -3,7 +3,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "oxlint --type-aware src",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
@@ -33,11 +33,11 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.19.19",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^9.18.0",
+    "oxlint": "^1.68.0",
+    "oxlint-tsgolint": "^0.23.0",
     "prettier": "^3.4.2",
     "tsx": "^4.22.4",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.20.0",
     "vitest": "^4.1.8"
   }
 }
