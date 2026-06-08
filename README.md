@@ -1,8 +1,21 @@
 # @jmondi/oauth2-server-example
 
-An example implementation of [@jmondi/oauth2-server](https://github.com/jasonraimondi/ts-oauth2-server) using a [Hono](https://hono.dev) server and a SvelteKit client. It shows how to wire the package into a realistic app: a full authorization-code + PKCE flow with **real user consent**, OpenID Connect, refresh and revocation, and a browser client that consumes it.
+[![CI](https://github.com/jasonraimondi/ts-oauth2-server-example/actions/workflows/ci.yml/badge.svg)](https://github.com/jasonraimondi/ts-oauth2-server-example/actions/workflows/ci.yml)
 
-> This repo targets **@jmondi/oauth2-server v5** (currently `5.0.0-rc.1`), which is what enables the Fetch `vanilla` adapter and the OIDC endpoints used here. npm `latest` is still v4, so the v5-only APIs in this example are expected.
+An example implementation of [@jmondi/oauth2-server](https://github.com/jasonraimondi/ts-oauth2-server) using a [Hono](https://hono.dev) server and a SvelteKit client. It wires the package into a realistic app — a full authorization-code + PKCE flow with **real user consent**, OpenID Connect, token refresh and revocation, and a browser client that consumes it. The goal is a blueprint you can read end to end, not a "hello world".
+
+> [!NOTE]
+> This repo targets **@jmondi/oauth2-server v5** (currently `5.0.0-rc.2`), which is what enables the Fetch `vanilla` adapter and the OIDC endpoints used here. npm `latest` is still v4, so the v5-only APIs in this example are expected.
+
+## Features
+
+- **Authorization Code + PKCE** — S256 is mandatory; the seeded clients are public (no secret).
+- **A real consent step** — `GET /authorize` never auto-approves; the consent form honors both accept and deny.
+- **OpenID Connect** — `id_token` (RS256) on the code flow, plus discovery, JWKS, and userinfo endpoints.
+- **Refresh & revocation** — a refresh-token grant and an RFC 7009 revoke endpoint.
+- **Server-rendered auth UI** — login + consent forms in Hono JSX, behind Origin-based CSRF.
+- **Fetch-native** — Hono's `Request`/`Response` bridged to the package via the `vanilla` adapter.
+- **Browser SPA client** — SvelteKit (Svelte 5) holding the access token in memory only.
 
 ## Stack
 
@@ -33,6 +46,8 @@ The OAuth2 HTTP endpoints bridge Hono's Fetch `Request`/`Response` to the packag
 OIDC is enabled on the authorization-code flow. Requesting the `openid` scope adds an `id_token` (RS256) to the token response. OIDC tokens are signed with an RSA key from `OIDC_PRIVATE_KEY` (or an ephemeral key generated at boot if unset — handy for dev, but tokens won't survive a restart). The seeded **OIDC Demo Client** is granted `openid`, `email`, and `profile`.
 
 ## Getting Started
+
+**Prerequisites:** [Node.js](https://nodejs.org) >= 22, [pnpm](https://pnpm.io) (`npm i -g pnpm`), and [Docker](https://www.docker.com) for Postgres.
 
 ```bash
 cp -n .env.example .env   # the defaults already match the bundled docker-compose
@@ -131,7 +146,8 @@ To keep the access token out of script-readable storage, it is held **in memory*
 
 ## Adapting for production
 
-This repo optimizes for being readable and runnable on `localhost`. Before shipping anything like it, change at least:
+> [!WARNING]
+> This repo optimizes for being readable and runnable on `localhost`. Don't ship it as-is — at least change the following:
 
 - **Session cookie `Secure`** — gated to `NODE_ENV === "production"` here so the demo works over plain `http://localhost`. Production must serve over HTTPS with `Secure` on.
 - **`SESSION_SECRET`** — the browser session cookie (`jid`) is an HS256 JWT signed with a secret that is deliberately **separate** from the OIDC RSA key (different trust domains). A hardcoded insecure default is used if unset (with a warning) — set a long random `SESSION_SECRET` in production.
@@ -142,7 +158,8 @@ This repo optimizes for being readable and runnable on `localhost`. Before shipp
 
 ### Known package limitation
 
-In `5.0.0-rc.1`, `authorizationServer.revoke()` for an **access** token is dispatched to the client-credentials grant and is effectively a no-op, so the access-token row is not force-expired. Refresh-token revocation works, and the `/userinfo` revocation guard (`getByAccessToken` + `isAccessTokenRevoked`) works when a token is expired/revoked. The tests therefore assert revocation by expiring the row directly.
+> [!IMPORTANT]
+> In `5.0.0-rc.2`, `authorizationServer.revoke()` for an **access** token is dispatched to the client-credentials grant and is effectively a no-op, so the access-token row is not force-expired. Refresh-token revocation works, and the `/userinfo` revocation guard (`getByAccessToken` + `isAccessTokenRevoked`) works when a token is expired/revoked. The tests therefore assert revocation by expiring the row directly.
 
 ## Tests
 
