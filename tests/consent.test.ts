@@ -150,8 +150,9 @@ describe("access-token revocation guards /userinfo (proves getByAccessToken + is
     // Revoke the access token by force-expiring its stored row — exactly what the
     // TokenRepository.revoke()/isAccessTokenRevoked model does (the JWT's jti is
     // the stored accessToken). We expire the row directly rather than through the
-    // /revoke route because the library dispatches access-token revokes to the
-    // ClientCredentialsGrant, whose route path no-ops here (see final report).
+    // /revoke route to isolate the userinfo guard from RFC 7009's client-auth step
+    // (authenticateRevoke defaults on); the route itself does revoke an access
+    // token when the request carries client_id.
     const jti = (jwt.decode(access_token) as { jti: string }).jti;
     await db
       .update(oauthTokens)

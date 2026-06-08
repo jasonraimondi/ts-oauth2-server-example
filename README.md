@@ -156,10 +156,10 @@ To keep the access token out of script-readable storage, it is held **in memory*
 - **Trusted proxy** — `lastLoginIP` is read from `X-Forwarded-For`, which is client-spoofable unless a trusted reverse proxy sets it.
 - **Consent persistence** — this demo asks for consent on every authorization; a real OP typically remembers prior grants per user+client.
 
-### Known package limitation
+### Revocation requires client authentication
 
 > [!IMPORTANT]
-> In `5.0.0-rc.2`, `authorizationServer.revoke()` for an **access** token is dispatched to the client-credentials grant and is effectively a no-op, so the access-token row is not force-expired. Refresh-token revocation works, and the `/userinfo` revocation guard (`getByAccessToken` + `isAccessTokenRevoked`) works when a token is expired/revoked. The tests therefore assert revocation by expiring the row directly.
+> The RFC 7009 revoke endpoint force-expires **both** access and refresh tokens, but `authenticateRevoke` defaults to `true`, so the request must authenticate the client (`client_id`, plus `client_secret` for a confidential client). An unauthenticated revoke returns a silent `200` and revokes nothing — RFC 7009 returns `200` even for invalid tokens, so a failed revoke is indistinguishable from a successful one. The suite asserts revocation without the endpoint: by force-expiring the stored row directly, and through the `/userinfo` guard (`getByAccessToken` + `isAccessTokenRevoked`).
 
 ## Tests
 
