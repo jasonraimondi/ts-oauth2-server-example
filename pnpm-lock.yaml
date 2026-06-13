@@ -18,8 +18,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1
       '@jmondi/oauth2-server':
-        specifier: 5.0.0-rc.2
-        version: 5.0.0-rc.2
+        specifier: 5.0.0-rc.4
+        version: 5.0.0-rc.4(@types/jsonwebtoken@9.0.10)(@types/ms@2.1.0)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -549,9 +549,20 @@ packages:
     resolution: {integrity: sha512-o/MdnGQQF9rDAU0PFIrnAskhqRi+Jk1V/BczgTs6/U5YhSVKFgvJIfWuwwHkQk1OUm83mFx3Mhg+sUxRh3Z1Lg==}
     engines: {node: '>=18.0.0'}
 
-  '@jmondi/oauth2-server@5.0.0-rc.2':
-    resolution: {integrity: sha512-FsCpvR4ZiqNIG60CiZV9S0uvBCeI9BqHdaBhKFD5kiV7JmkwPiu8XMVYaEI9MUKnAHUICS/xB6S/3ORRcE8koQ==}
+  '@jmondi/oauth2-server@5.0.0-rc.4':
+    resolution: {integrity: sha512-1D0tY0PMnnYXgpQ6964hTWTE+z9Sizh/fmBZLAM2oeqs8GUabUK4xhS+FXmczTzrNhARu19vbgFA3s87k61iqQ==}
     engines: {node: '>=22'}
+    peerDependencies:
+      '@types/jsonwebtoken': ^9.0.0
+      '@types/ms': ^2.1.0
+      h3: ^1.15.0
+    peerDependenciesMeta:
+      '@types/jsonwebtoken':
+        optional: true
+      '@types/ms':
+        optional: true
+      h3:
+        optional: true
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -1202,10 +1213,6 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
-  punycode@2.3.1:
-    resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
-    engines: {node: '>=6'}
-
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
@@ -1272,9 +1279,6 @@ packages:
 
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
-
-  uri-js@4.4.1:
-    resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
   vite@8.0.16:
     resolution: {integrity: sha512-h9bXPmJichP5fLmVQo3PyaGSDE2n3aPuomeAlVRm0JLmt4rY6zmPKd59HYI4LNW8oTK7tlTsuC7l/m7awx9Jcw==}
@@ -1633,11 +1637,13 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  '@jmondi/oauth2-server@5.0.0-rc.2':
+  '@jmondi/oauth2-server@5.0.0-rc.4(@types/jsonwebtoken@9.0.10)(@types/ms@2.1.0)':
     dependencies:
       jsonwebtoken: 9.0.3
       ms: 2.1.3
-      uri-js: 4.4.1
+    optionalDependencies:
+      '@types/jsonwebtoken': 9.0.10
+      '@types/ms': 2.1.0
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
@@ -2124,8 +2130,6 @@ snapshots:
 
   prettier@3.8.3: {}
 
-  punycode@2.3.1: {}
-
   resolve-pkg-maps@1.0.0: {}
 
   rolldown@1.0.3:
@@ -2191,10 +2195,6 @@ snapshots:
   typescript@6.0.3: {}
 
   undici-types@7.24.6: {}
-
-  uri-js@4.4.1:
-    dependencies:
-      punycode: 2.3.1
 
   vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.0)(tsx@4.22.4):
     dependencies:
