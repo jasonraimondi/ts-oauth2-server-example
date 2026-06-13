@@ -21,7 +21,10 @@ type WithClient = {
   client: ClientModel | Client;
 };
 
-export class Token implements TokenModel, OAuthToken {
+// OAuthToken types originatingAuthCodeId as `string | undefined` while the DB
+// row infers `string | null`; omit it from the TokenModel side so the single
+// field can satisfy OAuthToken (we normalize null -> undefined in the ctor).
+export class Token implements Omit<TokenModel, "originatingAuthCodeId">, OAuthToken {
   accessToken: string;
   accessTokenExpiresAt: Date;
   refreshToken: string | null;
@@ -31,6 +34,9 @@ export class Token implements TokenModel, OAuthToken {
   user: User | null;
   userId: string | null;
   scopes: Scope[];
+  // The auth code this token chain descends from (refresh-token family key).
+  // OAuthToken declares it optional; the library reads/sets it during rotation.
+  originatingAuthCodeId?: string;
   updatedAt: Date | null;
   createdAt: Date;
 
@@ -39,6 +45,7 @@ export class Token implements TokenModel, OAuthToken {
     this.accessTokenExpiresAt = entity.accessTokenExpiresAt;
     this.refreshToken = entity.refreshToken;
     this.refreshTokenExpiresAt = entity.refreshTokenExpiresAt;
+    this.originatingAuthCodeId = entity.originatingAuthCodeId ?? undefined;
     this.user = user ? new User(user) : null;
     this.userId = entity.userId;
     this.client = new Client(client);

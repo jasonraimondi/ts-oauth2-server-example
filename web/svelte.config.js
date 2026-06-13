@@ -1,4 +1,4 @@
-import adapter from "@sveltejs/adapter-static";
+import adapter from "@sveltejs/adapter-node";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,9 +8,9 @@ const config = {
   preprocess: vitePreprocess(),
 
   kit: {
-    // SPA mode: emit a fallback page so client-routed paths resolve on a
-    // static host (the routes render entirely in the browser).
-    adapter: adapter({ fallback: "index.html" }),
+    // The app is a Backend-for-Frontend: it runs as a Node server so it can hold
+    // OAuth tokens server-side and expose same-origin endpoints. See ADR-0001.
+    adapter: adapter(),
   },
 };
 

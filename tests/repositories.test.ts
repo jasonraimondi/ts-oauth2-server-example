@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
+import type { OAuthClient } from "@jmondi/oauth2-server";
+
 import { db } from "../src/db/index.js";
 import { oauthAuthCodeScopes, oauthTokenScopes } from "../src/db/schema.js";
+import { setPassword } from "../src/lib/password.js";
 import { AuthCodeRepository } from "../src/app/oauth/repositories/auth_code_repository.js";
 import { ClientRepository } from "../src/app/oauth/repositories/client_repository.js";
 import { ScopeRepository } from "../src/app/oauth/repositories/scope_repository.js";
@@ -28,6 +31,60 @@ describe("ClientRepository", () => {
     await expect(
       repository.getByIdentifier("00000000-0000-0000-0000-000000000000"),
     ).rejects.toThrow();
+  });
+
+  // The confidential BFF client stores its secret as a bcrypt hash at rest, so
+  // isClientValid must verify the presented plaintext against that hash rather
+  // than string-compare. (ADR-0001 / finding #5.)
+  it("isClientValid accepts the correct secret against a bcrypt hash at rest", async () => {
+    const secret = "correct-secret-value";
+    const client = {
+      secret: await setPassword(secret),
+      allowedGrants: ["authorization_code"],
+    } as unknown as OAuthClient;
+
+    expect(await repository.isClientValid("authorization_code", client, secret)).toBe(true);
+  });
+
+  it("isClientValid rejects a wrong secret against a bcrypt hash at rest", async () => {
+    const client = {
+      secret: await setPassword("correct-secret-value"),
+      allowedGrants: ["authorization_code"],
+    } as unknown as OAuthClient;
+
+    expect(await repository.isClientValid("authorization_code", client, "wrong-secret")).toBe(
+      false,
+    );
+  });
+
+  it("isClientValid treats a null-secret (public) client as valid without a secret", async () => {
+    const client = {
+      secret: null,
+      allowedGrants: ["authorization_code"],
+    } as unknown as OAuthClient;
+
+    expect(await repository.isClientValid("authorization_code", client, undefined)).toBe(true);
+  });
+
+  // Guards the seed wiring the BFF (Phase 4) depends on: confidential client,
+  // bcrypt-hashed secret, the /auth/callback redirect, and identity+contacts scopes.
+  it("the seeded BFF client is confidential and validates its dev secret", async () => {
+    const BFF_CLIENT_ID = "b1ff0000-0000-4000-8000-000000000001";
+    const BFF_CLIENT_SECRET = "bff-dev-secret-change-me";
+
+    const client = await repository.getByIdentifier(BFF_CLIENT_ID);
+
+    expect(client.secret).toBeTruthy();
+    expect(client.secret).not.toBe(BFF_CLIENT_SECRET); // stored as a hash, not plaintext
+    expect(client.redirectUris).toContain("http://localhost:5173/auth/callback");
+    expect(client.scopes.map(s => s.name)).toEqual(
+      expect.arrayContaining(["openid", "email", "contacts.read", "contacts.write"]),
+    );
+
+    expect(await repository.isClientValid("authorization_code", client, BFF_CLIENT_SECRET)).toBe(
+      true,
+    );
+    expect(await repository.isClientValid("authorization_code", client, "nope")).toBe(false);
   });
 });
 

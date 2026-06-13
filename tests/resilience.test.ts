@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { oauthClients, oauthAuthCodes, oauthTokens } from "../src/db/schema.js";
+import { setPassword } from "../src/lib/password.js";
 import { codeFromApprove, mintJid, pkce } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
@@ -40,7 +41,8 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     await db.insert(oauthClients).values({
       id: tempId,
       name: "Confidential",
-      secret: "shhh",
+      // Stored as a bcrypt hash at rest; the test presents a wrong secret below. (ADR-0001.)
+      secret: await setPassword("shhh"),
       redirectUris: [REDIRECT],
       allowedGrants: ["authorization_code"],
     });

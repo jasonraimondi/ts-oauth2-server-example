@@ -19,8 +19,8 @@ export function pkce(): Pkce {
  * DATABASE_URL) carrying typ:"session". Minting the OIDC jwt no longer works —
  * current_user.ts asserts typ:"session" via verifySession.
  */
-export function mintJid(userId: string = SEEDED_USER_ID): Promise<string> {
-  return signSession(userId, 3600);
+export function mintJid(userId: string = SEEDED_USER_ID, tokenVersion = 0): Promise<string> {
+  return signSession(userId, 3600, tokenVersion);
 }
 
 // app.request uses http://localhost as the origin; mirror it so hono/csrf passes.

@@ -14,7 +14,7 @@
   "devDependencies": {
     "@jmondi/browser-storage": "^1.7.1",
     "@sveltejs/adapter-auto": "^7.0.1",
-    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.63.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@types/js-cookie": "^3.0.3",
@@ -29,6 +29,7 @@
   },
   "type": "module",
   "dependencies": {
+    "jose": "^6.2.3",
     "wretch": "^2.6.0"
   }
 }
