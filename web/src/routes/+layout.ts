@@ -1,5 +1,5 @@
-// This client is a browser-only SPA: every route relies on window, cookies and
-// in-memory state, so there is no server to render or prerender against.
-// Disabling SSR/prerender lets adapter-static emit a single-page-app fallback.
+// Pages render client-side and talk to this app's own BFF endpoints (/api/*,
+// /auth/*), which run server-side regardless of this flag. SSR is off so there's
+// no server render step for the (auth-gated, fetch-driven) pages themselves.
 export const ssr = false;
 export const prerender = false;

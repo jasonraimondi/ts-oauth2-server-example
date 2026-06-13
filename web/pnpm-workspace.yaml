@@ -3,7 +3,6 @@
 # build scripts by default; allow the ones this toolchain needs.
 onlyBuiltDependencies:
   - esbuild
-  - "@jmondi/browser-storage"
 # pnpm's pre-run dependency check otherwise aborts `pnpm run` on the
 # "ignored build scripts" warning above; the deps here are trusted.
 verifyDepsBeforeRun: false

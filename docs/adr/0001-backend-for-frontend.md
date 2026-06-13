@@ -6,7 +6,7 @@ accepted
 
 ## Context
 
-The original web client was a static SvelteKit SPA that ran the Authorization Code + PKCE flow entirely in the browser and kept the OAuth tokens client-side — the access token in memory and the **refresh token in a JavaScript-readable cookie**. The code carried a prominent caveat admitting this is XSS-exfiltratable and not production-grade; it was a deliberate teaching shortcut. The repo's original premise was that the whole flow should be *visible in the browser*.
+The original web client was a static SvelteKit SPA that ran the Authorization Code + PKCE flow entirely in the browser and kept the OAuth tokens client-side — the access token in memory and the **refresh token in a JavaScript-readable cookie**. The code carried a prominent caveat admitting this is XSS-exfiltratable and not production-grade; it was a deliberate teaching shortcut. The repo's original premise was that the whole flow should be _visible in the browser_.
 
 ## Decision
 

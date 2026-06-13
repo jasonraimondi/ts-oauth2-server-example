@@ -1,18 +1,9 @@
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 
-const proxyOptions = {
-  target: `http://127.0.0.1:3000`,
-  changeOrigin: false,
-  secure: true,
-  ws: false,
-};
-
+// No dev proxy: the browser only ever talks to this app's own BFF endpoints
+// (/api/*, /auth/*), which run server-side. The BFF reaches the authorization
+// server (:3000) itself, server-to-server — the browser can't touch it directly.
 export default defineConfig({
   plugins: [sveltekit()],
-  server: {
-    proxy: {
-      "^/api(/|(\\?.*)?$)": proxyOptions,
-    },
-  },
 });

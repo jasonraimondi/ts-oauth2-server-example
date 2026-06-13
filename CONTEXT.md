@@ -19,7 +19,7 @@ The application requesting tokens on the Resource Owner's behalf. In this repo t
 _Avoid_: using "client" to mean the browser, the SPA, or `oauthClients` row interchangeably — say **BFF** or **browser** when that is what you mean.
 
 **Backend-for-Frontend** (BFF):
-The server-side half of the SvelteKit app (`:5173`) that *is* the OAuth Client — it holds the tokens and exposes a same-origin API to the browser.
+The server-side half of the SvelteKit app (`:5173`) that _is_ the OAuth Client — it holds the tokens and exposes a same-origin API to the browser.
 _Avoid_: "the SPA", "the frontend server".
 
 **Resource Server**:
@@ -35,11 +35,11 @@ A Client that authenticates to the AS with a `client_secret` (the BFF). Its secr
 A Client with no secret, relying on PKCE alone. The original in-browser SPA was one; the BFF rewrite retires it.
 
 **AS Session**:
-The Resource Owner's authenticated session *at the AS*, carried by the `jid` cookie (HS256). Governs login + consent.
+The Resource Owner's authenticated session _at the AS_, carried by the `jid` cookie (HS256). Governs login + consent.
 _Avoid_: plain "session" — always qualify.
 
 **BFF Session**:
-The end-user's session *with the Client app*, carried by an opaque `sid` cookie mapping to server-side token storage. A different trust relationship from the **AS Session**.
+The end-user's session _with the Client app_, carried by an opaque `sid` cookie mapping to server-side token storage. A different trust relationship from the **AS Session**.
 _Avoid_: plain "session".
 
 **Consent**:
@@ -57,7 +57,7 @@ The Resource Owner's explicit per-request approval of requested scopes; never au
 > **Dev:** "After login, does the browser store the access token?"
 > **Domain expert:** "No. The **BFF** holds it server-side and the browser gets a **BFF Session** cookie. The token only leaves the **BFF** when it calls the **Resource Server**."
 > **Dev:** "And the `jid` cookie?"
-> **Domain expert:** "Different thing — that's the **AS Session**, the **Resource Owner** being logged in *at the AS* for consent. Two sessions, two trust domains."
+> **Domain expert:** "Different thing — that's the **AS Session**, the **Resource Owner** being logged in _at the AS_ for consent. Two sessions, two trust domains."
 
 ## Flagged ambiguities
 

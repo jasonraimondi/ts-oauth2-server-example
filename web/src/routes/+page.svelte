@@ -1,11 +1,57 @@
 <script lang="ts">
-  import { ACCESS_TOKEN, COOKIE_STORAGE } from "$lib/browser_storage";
+  import { onMount } from "svelte";
 
-  // The access token lives only in memory, so it is present right after login
-  // but gone after a page reload (use Refresh token to mint a new one).
-  const accessToken = ACCESS_TOKEN.get();
-  const refreshToken = COOKIE_STORAGE.refreshToken.get();
+  type Me = { authenticated: boolean; user?: { sub: string; email?: string } };
+  type Contact = { name: string; email: string };
+
+  let me = $state<Me | null>(null);
+  let contacts = $state<Contact[] | null>(null);
+  let error = $state<string | null>(null);
+
+  async function loadMe() {
+    me = await (await fetch("/api/me")).json();
+  }
+
+  async function loadContacts() {
+    error = null;
+    contacts = null;
+    const res = await fetch("/api/contacts");
+    if (!res.ok) {
+      error = `Failed to load contacts (HTTP ${res.status}).`;
+      return;
+    }
+    contacts = await res.json();
+  }
+
+  async function logout() {
+    await fetch("/auth/logout", { method: "POST" });
+    contacts = null;
+    await loadMe();
+  }
+
+  onMount(loadMe);
 </script>
 
-<p>Access Token: {accessToken ?? "(none — in memory only, cleared on reload)"}</p>
-<p>Refresh Token: {refreshToken ?? "(none)"}</p>
+<h1>Backend-for-Frontend OAuth2 demo</h1>
+
+{#if me === null}
+  <p>Loading…</p>
+{:else if !me.authenticated}
+  <p>Not logged in. The OAuth tokens are held by the server — never the browser.</p>
+  <!-- Full-page navigation: the BFF starts the OAuth redirect dance. -->
+  <a href="/auth/login">Log in</a>
+{:else}
+  <p>Signed in as <strong>{me.user?.email ?? me.user?.sub}</strong>.</p>
+  <button onclick={loadContacts}>Load contacts</button>
+  <button onclick={logout}>Log out</button>
+
+  {#if error}<p>{error}</p>{/if}
+
+  {#if contacts}
+    <ul>
+      {#each contacts as contact}
+        <li>{contact.name} — {contact.email}</li>
+      {/each}
+    </ul>
+  {/if}
+{/if}
