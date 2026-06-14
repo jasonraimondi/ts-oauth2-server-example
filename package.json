@@ -32,7 +32,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.2",
     "drizzle-kit": "^0.31.10",
-    "oxlint": "^1.68.0",
+    "oxlint": "^1.69.0",
     "oxlint-tsgolint": "^0.23.0",
     "prettier": "^3.8.3",
     "tsx": "^4.22.4",
