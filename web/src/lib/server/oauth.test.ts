@@ -8,6 +8,7 @@ import {
   exchangeCode,
   fetchUserInfo,
   generatePkce,
+  safeReturnTo,
   validateIdToken,
 } from "./oauth";
 
@@ -56,6 +57,37 @@ describe("generatePkce", () => {
 
   it("is non-deterministic", () => {
     expect(generatePkce().verifier).not.toBe(generatePkce().verifier);
+  });
+});
+
+describe("safeReturnTo", () => {
+  it("keeps a normal local path", () => {
+    expect(safeReturnTo("/contacts")).toBe("/contacts");
+  });
+
+  it("preserves a local path's query and fragment", () => {
+    expect(safeReturnTo("/contacts?page=2#top")).toBe("/contacts?page=2#top");
+  });
+
+  it("defaults to / for null or empty input", () => {
+    expect(safeReturnTo(null)).toBe("/");
+    expect(safeReturnTo("")).toBe("/");
+  });
+
+  it("rejects an absolute URL (open redirect)", () => {
+    expect(safeReturnTo("https://evil.example")).toBe("/");
+  });
+
+  it("rejects a protocol-relative URL (open redirect)", () => {
+    expect(safeReturnTo("//evil.example")).toBe("/");
+  });
+
+  it("rejects a backslash-tricked URL browsers treat as protocol-relative", () => {
+    expect(safeReturnTo("/\\evil.example")).toBe("/");
+  });
+
+  it("rejects a value that does not start with a slash", () => {
+    expect(safeReturnTo("evil.example")).toBe("/");
   });
 });
 

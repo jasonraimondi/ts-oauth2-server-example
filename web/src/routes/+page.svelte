@@ -17,6 +17,12 @@
     contacts = null;
     const res = await fetch("/api/contacts");
     if (!res.ok) {
+      // A 401 means the BFF tore down the session (e.g. the refresh token expired);
+      // re-sync auth state so the UI drops back to the logged-out view.
+      if (res.status === 401) {
+        await loadMe();
+        return;
+      }
       error = `Failed to load contacts (HTTP ${res.status}).`;
       return;
     }

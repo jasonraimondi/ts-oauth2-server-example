@@ -14,6 +14,19 @@ export function generatePkce(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
+/**
+ * Sanitize a post-login `returnTo` into a same-origin path, defaulting to "/".
+ * Only a value beginning with a single "/" is allowed: an absolute URL
+ * ("https://evil"), a protocol-relative one ("//evil"), or the backslash trick
+ * ("/\\evil", which browsers normalize to "//evil") would each be an open
+ * redirect once handed to a 302 Location. Sanitized on the way in so a tainted
+ * value never reaches the pending store.
+ */
+export function safeReturnTo(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/";
+  return raw;
+}
+
 export function buildAuthorizeUrl(opts: {
   authorizationEndpoint: string;
   clientId: string;

@@ -49,3 +49,22 @@ export function updateSession(sid: string, value: Session): void {
 export function destroySession(sid: string): void {
   sessions.delete(sid);
 }
+
+const refreshInFlight = new Map<string, Promise<Session>>();
+
+/**
+ * Single-flight the token refresh for one session: concurrent requests (a
+ * double-clicked action, or /api/me + /api/contacts firing together) share one
+ * in-flight refresh instead of each replaying the same refresh token. Without
+ * this, the second request presents an already-rotated token, which the AS's
+ * reuse detection (RFC 9700) treats as theft and revokes the whole family —
+ * logging the user out for a benign double request. The entry clears once the
+ * refresh settles, so a later refresh (or a retry after failure) runs again.
+ */
+export function coalesceRefresh(sid: string, run: () => Promise<Session>): Promise<Session> {
+  const existing = refreshInFlight.get(sid);
+  if (existing) return existing;
+  const promise = run().finally(() => refreshInFlight.delete(sid));
+  refreshInFlight.set(sid, promise);
+  return promise;
+}
