@@ -19,12 +19,16 @@ export function generatePkce(): { verifier: string; challenge: string } {
  * Only a value beginning with a single "/" is allowed: an absolute URL
  * ("https://evil"), a protocol-relative one ("//evil"), or the backslash trick
  * ("/\\evil", which browsers normalize to "//evil") would each be an open
- * redirect once handed to a 302 Location. Sanitized on the way in so a tainted
- * value never reaches the pending store.
+ * redirect once handed to a 302 Location. Control characters are stripped first
+ * because browsers do the same before parsing, so "/\t//evil" would otherwise
+ * slip past the prefix checks and resolve to a protocol-relative redirect.
+ * Sanitized on the way in so a tainted value never reaches the pending store.
  */
 export function safeReturnTo(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/";
-  return raw;
+  if (!raw) return "/";
+  const v = raw.replace(/[\u0000-\u001f\u007f]/g, "");
+  if (!v.startsWith("/") || v.startsWith("//") || v.startsWith("/\\")) return "/";
+  return v;
 }
 
 export function buildAuthorizeUrl(opts: {

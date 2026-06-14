@@ -86,6 +86,15 @@ describe("safeReturnTo", () => {
     expect(safeReturnTo("/\\evil.example")).toBe("/");
   });
 
+  it("rejects a tab-tricked URL browsers strip to protocol-relative", () => {
+    expect(safeReturnTo("/\t//evil.example")).toBe("/");
+  });
+
+  it("rejects a newline/CR-tricked URL browsers strip to protocol-relative", () => {
+    expect(safeReturnTo("/\n//evil.example")).toBe("/");
+    expect(safeReturnTo("/\r//evil.example")).toBe("/");
+  });
+
   it("rejects a value that does not start with a slash", () => {
     expect(safeReturnTo("evil.example")).toBe("/");
   });
