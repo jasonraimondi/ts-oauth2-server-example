@@ -10,7 +10,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * A minimal in-memory, per-IP fixed-window rate limiter. Counts only unsafe
  * methods and returns 429 (with Retry-After) once a client exceeds `max` within
  * `windowMs`. Per-process only — fine for a single instance / this demo; a real
- * multi-instance deployment would back it with a shared store (e.g. Redis). (#7.)
+ * multi-instance deployment would back it with a shared store (e.g. Redis).
  */
 export function rateLimit(opts: { windowMs: number; max: number }): MiddlewareHandler {
   const buckets = new Map<string, Bucket>();

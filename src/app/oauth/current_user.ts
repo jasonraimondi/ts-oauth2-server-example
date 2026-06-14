@@ -22,7 +22,7 @@ export const currentUser = createMiddleware<AppEnv>(async (c, next) => {
   try {
     const user = await userRepository.getUserByCredentials(session.sub);
     // Revocable sessions: the cookie carries the tokenVersion it was minted with;
-    // a bump (logout, password change) leaves every older cookie behind. (Finding #2.)
+    // a bump (logout, password change) leaves every older cookie behind.
     if (user.tokenVersion === session.ver) c.set("user", user);
   } catch (e) {
     // A deleted/unknown user just means "not logged in"; any other error (e.g. the

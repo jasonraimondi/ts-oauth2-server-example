@@ -35,7 +35,7 @@ describe("ClientRepository", () => {
 
   // The confidential BFF client stores its secret as a bcrypt hash at rest, so
   // isClientValid must verify the presented plaintext against that hash rather
-  // than string-compare. (ADR-0001 / finding #5.)
+  // than string-compare. (ADR-0001.)
   it("isClientValid accepts the correct secret against a bcrypt hash at rest", async () => {
     const secret = "correct-secret-value";
     const client = {
@@ -66,7 +66,7 @@ describe("ClientRepository", () => {
     expect(await repository.isClientValid("authorization_code", client, undefined)).toBe(true);
   });
 
-  // Guards the seed wiring the BFF (Phase 4) depends on: confidential client,
+  // Guards the seed wiring the BFF depends on: confidential client,
   // bcrypt-hashed secret, the /auth/callback redirect, and identity+contacts scopes.
   it("the seeded BFF client is confidential and validates its dev secret", async () => {
     const BFF_CLIENT_ID = "b1ff0000-0000-4000-8000-000000000001";

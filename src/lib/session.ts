@@ -20,7 +20,7 @@ export function resolveSessionSecret(): string {
   if (fromEnv && fromEnv !== DEV_SECRET) return fromEnv;
   // Fail closed in production: a missing or default secret means forgeable session
   // cookies (HS256 with a publicly-known key), so refuse to boot rather than warn
-  // and carry on. (Finding #4.)
+  // and carry on.
   if (process.env.NODE_ENV === "production") {
     throw new Error(
       "SESSION_SECRET must be set to a non-default value in production (refusing the insecure dev default).",

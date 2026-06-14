@@ -58,7 +58,7 @@ app.get("/api/ping", c => c.text("pong"));
 // Rate limits on the brute-forceable endpoints (credential stuffing on login,
 // code/secret grinding on token). Per-IP, in-memory; counts only POSTs. `max` is
 // env-overridable so the test suite, which hammers these from one address, can
-// lift the ceiling. Mounted before the routes so Hono wraps them. (Finding #7.)
+// lift the ceiling. Mounted before the routes so Hono wraps them.
 app.use(
   "/api/login",
   rateLimit({ windowMs: 15 * 60_000, max: Number(process.env.LOGIN_RATE_MAX ?? 10) }),
@@ -110,7 +110,7 @@ const bearerUnauthorized = (c: Context, description: string) =>
 // Scoped resource: requires a valid, non-revoked Bearer access token carrying the
 // contacts.read scope. Mirrors the /userinfo validation (AccessTokenVerifier pins
 // typ:at+jwt, alg:RS256, iss; revocation guard via the token row) and adds the
-// scope check the BFF will exercise. (Phase 2.)
+// scope check the BFF will exercise.
 app.get("/api/contacts", async c => {
   const authHeader = c.req.header("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
@@ -216,7 +216,7 @@ app.post(
 
 // Logout revokes every session for the user by bumping tokenVersion: any cookie
 // minted with the old version (including one already captured) stops validating
-// in currentUser. Then drop the cookie client-side too. (Finding #2.)
+// in currentUser. Then drop the cookie client-side too.
 app.post("/api/logout", async c => {
   const user = c.get("user");
   if (user) {

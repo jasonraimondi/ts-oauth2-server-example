@@ -16,7 +16,7 @@ export function resolvePrivateKey(): string {
 
   // Fail closed in production: an ephemeral key silently invalidates every issued
   // token on restart and isn't backed by managed key material, so refuse to boot
-  // rather than generate one. (Finding #4.)
+  // rather than generate one.
   if (process.env.NODE_ENV === "production") {
     throw new Error(
       "OIDC_PRIVATE_KEY must be set in production (refusing to generate an ephemeral key).",

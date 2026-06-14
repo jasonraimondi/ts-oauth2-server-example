@@ -85,7 +85,7 @@ export const oauthTokens = pgTable("oauth_tokens", {
   refreshTokenExpiresAt: timestamp(),
   // The authorization code this token chain descends from — the refresh-token
   // "family" key. The library threads it across rotations; we revoke the whole
-  // family on refresh-token reuse or auth-code replay (RFC 9700). (Finding #3.)
+  // family on refresh-token reuse or auth-code replay (RFC 9700).
   originatingAuthCodeId: text(),
   createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
   updatedAt: timestamp(),
