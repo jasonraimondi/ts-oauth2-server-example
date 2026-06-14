@@ -7,9 +7,22 @@
   let me = $state<Me | null>(null);
   let contacts = $state<Contact[] | null>(null);
   let error = $state<string | null>(null);
+  let meError = $state<string | null>(null);
 
   async function loadMe() {
-    me = await (await fetch("/api/me")).json();
+    meError = null;
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        meError = `Couldn't check sign-in status (HTTP ${res.status}).`;
+        return;
+      }
+      me = await res.json();
+    } catch {
+      // Network failure / unreachable server — surface it instead of leaving
+      // the UI stuck on "Loading…" forever.
+      meError = "Couldn't reach the server. Check your connection and try again.";
+    }
   }
 
   async function loadContacts() {
@@ -41,7 +54,12 @@
 <h1>Backend-for-Frontend OAuth2 demo</h1>
 
 {#if me === null}
-  <p>Loading…</p>
+  {#if meError}
+    <p>{meError}</p>
+    <button onclick={loadMe}>Retry</button>
+  {:else}
+    <p>Loading…</p>
+  {/if}
 {:else if !me.authenticated}
   <p>Not logged in. The OAuth tokens are held by the server — never the browser.</p>
   <!-- Full-page navigation: the BFF starts the OAuth redirect dance. -->
@@ -55,7 +73,7 @@
 
   {#if contacts}
     <ul>
-      {#each contacts as contact}
+      {#each contacts as contact (contact.email)}
         <li>{contact.name} — {contact.email}</li>
       {/each}
     </ul>
