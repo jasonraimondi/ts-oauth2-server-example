@@ -46,7 +46,7 @@ function refresh(refreshToken: string): Promise<Response> {
   });
 }
 
-describe("refresh-token reuse detection revokes the family (finding #3)", () => {
+describe("refresh-token reuse detection revokes the family", () => {
   it("kills the active refresh token when a rotated one is reused", async () => {
     const first = await initialTokens(); // RT1
 

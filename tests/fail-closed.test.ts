@@ -24,7 +24,7 @@ function withEnv(overrides: Record<string, string | undefined>, fn: () => void):
   }
 }
 
-describe("fail-closed secrets in production (finding #4)", () => {
+describe("fail-closed secrets in production", () => {
   it("resolveSessionSecret throws in production when SESSION_SECRET is unset", () => {
     withEnv({ NODE_ENV: "production", SESSION_SECRET: undefined }, () => {
       expect(() => resolveSessionSecret()).toThrow(/SESSION_SECRET/);

@@ -14,7 +14,7 @@ function hit(a: Hono, ip: string, method = "POST"): Promise<Response> {
   return a.request("/x", { method, headers: { "x-forwarded-for": ip } });
 }
 
-describe("rateLimit middleware (finding #7)", () => {
+describe("rateLimit middleware", () => {
   it("allows up to `max` requests then returns 429", async () => {
     const a = appWith(2);
     expect((await hit(a, "1.1.1.1")).status).toBe(200);

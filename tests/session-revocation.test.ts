@@ -28,7 +28,7 @@ async function resetTokenVersion(): Promise<void> {
   await db.update(users).set({ tokenVersion: 0 }).where(eq(users.id, SEEDED_USER_ID));
 }
 
-describe("revocable AS session via tokenVersion (finding #2)", () => {
+describe("revocable AS session via tokenVersion", () => {
   it("rejects a session cookie after the user's tokenVersion is bumped", async () => {
     const jid = await mintJid(); // signed with the seeded user's tokenVersion (0)
     expect((await authorizeTarget(jid)).startsWith("/api/scopes")).toBe(true);
