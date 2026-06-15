@@ -1,6 +1,12 @@
 import "dotenv/config";
 
-import { AuthorizationServer, DateInterval, OAuthException } from "@jmondi/oauth2-server";
+import {
+  AccessTokenVerifier,
+  AuthorizationServer,
+  DateInterval,
+  DEFAULT_AUTHORIZATION_SERVER_OPTIONS,
+  OAuthException,
+} from "@jmondi/oauth2-server";
 
 import { db } from "./db/index.js";
 import { ClientRepository } from "./app/oauth/repositories/client_repository.js";
@@ -57,6 +63,15 @@ authorizationServer.enableGrantTypes(
   [{ grant: "authorization_code", authCodeRepository, userRepository }, new DateInterval("1h")],
 );
 
+// Resource-server seam: validates a Bearer access token the same way /userinfo
+// does (typ:at+jwt, alg:RS256, iss equality). Only `issuer` differs from the
+// defaults; revocation is checked separately via tokenRepository at the route.
+const accessTokenVerifier = new AccessTokenVerifier(jwt, {
+  ...DEFAULT_AUTHORIZATION_SERVER_OPTIONS,
+  issuer,
+});
+
 // Only the handles other modules actually consume are exported; the repositories
-// are wired into the AuthorizationServer above and don't need to leak out.
-export { authorizationServer, db, jwt, userRepository };
+// are wired into the AuthorizationServer above and don't need to leak out — except
+// tokenRepository + accessTokenVerifier, which the /api/contacts resource consumes.
+export { authorizationServer, db, jwt, userRepository, tokenRepository, accessTokenVerifier };

@@ -4,7 +4,7 @@ import { csrf } from "hono/csrf";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, ilike } from "drizzle-orm";
+import { eq, ilike, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 import { html } from "hono/html";
@@ -15,11 +15,13 @@ import {
   responseToVanilla,
   handleVanillaError,
 } from "@jmondi/oauth2-server/vanilla";
+import { OAuthException, type AccessTokenPayload } from "@jmondi/oauth2-server";
 
-import { authorizationServer, db } from "./container.js";
+import { authorizationServer, db, accessTokenVerifier, tokenRepository } from "./container.js";
 import { users } from "./db/schema.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
+import { rateLimit } from "./lib/rate_limit.js";
 import { signSession } from "./lib/session.js";
 import { Login } from "./views/Login.js";
 import { Scopes } from "./views/Scopes.js";
@@ -53,6 +55,19 @@ app.onError(err => {
 
 app.get("/api/ping", c => c.text("pong"));
 
+// Rate limits on the brute-forceable endpoints (credential stuffing on login,
+// code/secret grinding on token). Per-IP, in-memory; counts only POSTs. `max` is
+// env-overridable so the test suite, which hammers these from one address, can
+// lift the ceiling. Mounted before the routes so Hono wraps them.
+app.use(
+  "/api/login",
+  rateLimit({ windowMs: 15 * 60_000, max: Number(process.env.LOGIN_RATE_MAX ?? 10) }),
+);
+app.use(
+  "/api/oauth2/token",
+  rateLimit({ windowMs: 60_000, max: Number(process.env.TOKEN_RATE_MAX ?? 60) }),
+);
+
 app.post("/api/oauth2/token", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
   return responseToVanilla(await authorizationServer.respondToAccessTokenRequest(oauthReq));
@@ -76,6 +91,58 @@ app.get("/.well-known/jwks.json", () => responseToVanilla(authorizationServer.jw
 app.on(["GET", "POST"], "/api/oauth2/userinfo", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
   return responseToVanilla(await authorizationServer.userInfo(oauthReq));
+});
+
+// A tiny seeded "contacts" resource so the access token has something to spend.
+// In a real deployment this lives behind a separate resource server.
+const CONTACTS = [
+  { name: "Ada Lovelace", email: "ada@example.com" },
+  { name: "Grace Hopper", email: "grace@example.com" },
+  { name: "Alan Turing", email: "alan@example.com" },
+];
+
+// RFC 6750 invalid_token (401) without echoing the token value.
+const bearerUnauthorized = (c: Context, description: string) =>
+  c.json({ error: "invalid_token", error_description: description }, 401, {
+    "www-authenticate": `Bearer error="invalid_token", error_description="${description}"`,
+  });
+
+// Scoped resource: requires a valid, non-revoked Bearer access token carrying the
+// contacts.read scope. Mirrors the /userinfo validation (AccessTokenVerifier pins
+// typ:at+jwt, alg:RS256, iss; revocation guard via the token row) and adds the
+// scope check the BFF will exercise.
+app.get("/api/contacts", async c => {
+  const authHeader = c.req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return bearerUnauthorized(c, "A bearer access token is required.");
+  }
+
+  let payload: AccessTokenPayload;
+  try {
+    payload = await accessTokenVerifier.verify(authHeader);
+    // The JWT jti is the stored access-token row; a revoked (force-expired) row
+    // must be rejected even while the JWT itself is still within its exp window.
+    const stored = await tokenRepository.getByAccessToken(payload.jti as string);
+    if (await tokenRepository.isAccessTokenRevoked(stored)) {
+      return bearerUnauthorized(c, "The access token has been revoked.");
+    }
+  } catch (e) {
+    if (e instanceof OAuthException) {
+      return bearerUnauthorized(c, "The access token is invalid or expired.");
+    }
+    throw e;
+  }
+
+  const scopes = (typeof payload.scope === "string" ? payload.scope : "").split(" ");
+  if (!scopes.includes("contacts.read")) {
+    return c.json(
+      { error: "insufficient_scope", error_description: "The contacts.read scope is required." },
+      403,
+      { "www-authenticate": `Bearer error="insufficient_scope", scope="contacts.read"` },
+    );
+  }
+
+  return c.json(CONTACTS);
 });
 
 app.get("/api/oauth2/authorize", async c => {
@@ -133,7 +200,7 @@ app.post(
       .set({ lastLoginAt: new Date(), lastLoginIP: ip })
       .where(eq(users.id, row.id));
 
-    const token = await signSession(row.id, SESSION_TTL_SECONDS);
+    const token = await signSession(row.id, SESSION_TTL_SECONDS, row.tokenVersion);
     setCookie(c, "jid", token, {
       httpOnly: true,
       // Secure only in production: browsers drop Secure cookies over
@@ -147,9 +214,17 @@ app.post(
   },
 );
 
-// Clears the session cookie. The session is a stateless JWT, so logout is just
-// dropping the cookie client-side (no server-side revocation in this demo).
-app.post("/api/logout", c => {
+// Logout revokes every session for the user by bumping tokenVersion: any cookie
+// minted with the old version (including one already captured) stops validating
+// in currentUser. Then drop the cookie client-side too.
+app.post("/api/logout", async c => {
+  const user = c.get("user");
+  if (user) {
+    await db
+      .update(users)
+      .set({ tokenVersion: sql`token_version + 1` })
+      .where(eq(users.id, user.id));
+  }
   // Mirror the path/secure attributes used at set time so the clearing cookie
   // matches the original scope and the browser actually drops it.
   deleteCookie(c, "jid", { path: "/", secure: process.env.NODE_ENV === "production" });

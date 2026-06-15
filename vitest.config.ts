@@ -5,6 +5,9 @@ const { parsed } = config({ path: "tests/.env.test" });
 
 export default defineConfig({
   test: {
+    // Only the server's integration tests live here; the web/ BFF project has its
+    // own standalone Vitest config (pure, no DB), so keep the two suites separate.
+    include: ["tests/**/*.test.ts"],
     env: parsed,
     globalSetup: ["tests/setup/global-setup.ts"],
     setupFiles: ["tests/setup/truncate.ts"],

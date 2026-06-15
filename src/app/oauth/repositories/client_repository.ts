@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { OAuthException } from "@jmondi/oauth2-server";
 import type { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmondi/oauth2-server";
@@ -33,8 +34,12 @@ export class ClientRepository implements OAuthClientRepository {
     client: OAuthClient,
     clientSecret?: string,
   ): Promise<boolean> {
-    if (client.secret && client.secret !== clientSecret) {
-      return false;
+    // A confidential client stores its secret as a bcrypt hash at rest, so verify
+    // the presented plaintext against that hash (constant-time) instead of a
+    // string compare. A null secret marks a public (PKCE-only) client. (ADR-0001.)
+    if (client.secret) {
+      if (!clientSecret) return false;
+      if (!(await bcrypt.compare(clientSecret, client.secret))) return false;
     }
     return client.allowedGrants.includes(grantType);
   }

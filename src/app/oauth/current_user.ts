@@ -15,13 +15,15 @@ export const currentUser = createMiddleware<AppEnv>(async (c, next) => {
   if (!jid) return next();
 
   // verifySession checks the session-only HS256 secret AND asserts typ:"session",
-  // so an OIDC id_token can never stand in for a browser session here. The demo's
-  // session is non-revocable (no tokenVersion check) — it expires only by its exp.
-  const userId = await verifySession(jid);
-  if (!userId) return next();
+  // so an OIDC id_token can never stand in for a browser session here.
+  const session = await verifySession(jid);
+  if (!session) return next();
 
   try {
-    c.set("user", await userRepository.getUserByCredentials(userId));
+    const user = await userRepository.getUserByCredentials(session.sub);
+    // Revocable sessions: the cookie carries the tokenVersion it was minted with;
+    // a bump (logout, password change) leaves every older cookie behind.
+    if (user.tokenVersion === session.ver) c.set("user", user);
   } catch (e) {
     // A deleted/unknown user just means "not logged in"; any other error (e.g. the
     // DB being down) is real and must surface, not silently become anonymous.

@@ -69,7 +69,7 @@ overmind start  # or foreman start
 ## Development Notes
 
 - Server runs on port 3000 with all routes under the `/api` prefix
-- Web client runs separately via SvelteKit (Svelte 5); the access token is kept in memory (cleared on reload)
+- Web client (`web/`) is a SvelteKit **Backend-for-Frontend**: a confidential OAuth client that holds all tokens server-side (in-memory session store) and exposes same-origin `/auth/*` + `/api/*` endpoints; the browser only ever holds an opaque `sid` cookie (see ADR-0001)
 - Uses ESM modules (`"type": "module"`)
 - OIDC tokens are signed with an RSA key from `OIDC_PRIVATE_KEY` (PEM); if unset, an ephemeral key is generated at boot
 - The session cookie uses a separate `SESSION_SECRET` (HS256); an insecure dev default is used if unset

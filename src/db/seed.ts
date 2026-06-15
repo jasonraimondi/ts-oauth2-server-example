@@ -7,6 +7,11 @@ import { setPassword } from "../lib/password.js";
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const OIDC_CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d";
+// Confidential client for the Backend-for-Frontend (the SvelteKit server). Its
+// secret is stored as a bcrypt hash at rest; the plaintext lives ONLY in the
+// BFF's env (OAUTH_CLIENT_SECRET in web/.env). See ADR-0001.
+const BFF_CLIENT_ID = "b1ff0000-0000-4000-8000-000000000001";
+const BFF_CLIENT_SECRET = "bff-dev-secret-change-me";
 const SCOPE_READ_ID = "c3d49dba-53c8-4d08-970f-9c567414732e";
 const SCOPE_WRITE_ID = "22861a6c-dd8d-47b3-be1f-a3e7b67943bc";
 const SCOPE_OPENID_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6071";
@@ -52,6 +57,20 @@ export async function seed(database: typeof db = db): Promise<void> {
     })
     .onConflictDoNothing({ target: oauthClients.id });
 
+  // The confidential BFF client: a server-side OAuth client that holds tokens and
+  // calls the contacts resource on the user's behalf. It needs identity scopes
+  // (openid, email) plus the contacts API scopes. Secret hashed at rest. (ADR-0001.)
+  await database
+    .insert(oauthClients)
+    .values({
+      id: BFF_CLIENT_ID,
+      name: "BFF Web Client",
+      secret: await setPassword(BFF_CLIENT_SECRET),
+      allowedGrants: ["authorization_code", "refresh_token"],
+      redirectUris: ["http://localhost:5173/auth/callback"],
+    })
+    .onConflictDoNothing({ target: oauthClients.id });
+
   await database
     .insert(oauthScopes)
     .values([
@@ -71,6 +90,10 @@ export async function seed(database: typeof db = db): Promise<void> {
       { clientId: OIDC_CLIENT_ID, scopeId: SCOPE_OPENID_ID },
       { clientId: OIDC_CLIENT_ID, scopeId: SCOPE_EMAIL_ID },
       { clientId: OIDC_CLIENT_ID, scopeId: SCOPE_PROFILE_ID },
+      { clientId: BFF_CLIENT_ID, scopeId: SCOPE_OPENID_ID },
+      { clientId: BFF_CLIENT_ID, scopeId: SCOPE_EMAIL_ID },
+      { clientId: BFF_CLIENT_ID, scopeId: SCOPE_READ_ID },
+      { clientId: BFF_CLIENT_ID, scopeId: SCOPE_WRITE_ID },
     ])
     .onConflictDoNothing();
 }

@@ -55,6 +55,9 @@ export class TokenRepository implements OAuthTokenRepository {
       accessTokenExpiresAt: new DateInterval("1h").getEndDate(),
       refreshToken: null,
       refreshTokenExpiresAt: null,
+      // Set by the library (issueAccessToken) to the originating auth code id
+      // before persist; threaded onto rotated tokens so a chain shares a family.
+      originatingAuthCodeId: null,
       client,
       clientId: client.id,
       user: user ?? null,
@@ -90,8 +93,26 @@ export class TokenRepository implements OAuthTokenRepository {
 
   async isRefreshTokenRevoked(token: Token): Promise<boolean> {
     // No expiry means there is no live refresh token, so treat it as revoked.
-    if (!token.refreshTokenExpiresAt) return true;
-    return Date.now() > token.refreshTokenExpiresAt.getTime();
+    const revoked =
+      !token.refreshTokenExpiresAt || Date.now() > token.refreshTokenExpiresAt.getTime();
+
+    // Reuse detection (RFC 9700): a superseded/expired refresh token was just
+    // presented for a refresh — treat it as a theft signal and revoke the whole
+    // family, so a stolen-then-rotated token can't keep an active sibling alive.
+    if (revoked && token.originatingAuthCodeId) {
+      await this.revokeDescendantsOf(token.originatingAuthCodeId);
+    }
+    return revoked;
+  }
+
+  // RFC 9700 reuse/replay containment: revoke every token descended from the same
+  // authorization code (the refresh-token family). The library calls this on
+  // auth-code replay; isRefreshTokenRevoked calls it on refresh-token reuse.
+  async revokeDescendantsOf(authCodeId: string): Promise<void> {
+    await this.db
+      .update(oauthTokens)
+      .set({ accessTokenExpiresAt: new Date(0), refreshTokenExpiresAt: new Date(0) })
+      .where(eq(oauthTokens.originatingAuthCodeId, authCodeId));
   }
 
   async issueRefreshToken(token: Token, _client: OAuthClient): Promise<Token> {
@@ -118,6 +139,7 @@ export class TokenRepository implements OAuthTokenRepository {
         accessTokenExpiresAt: token.accessTokenExpiresAt,
         refreshToken: token.refreshToken,
         refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+        originatingAuthCodeId: token.originatingAuthCodeId ?? null,
         clientId: token.clientId,
         userId: token.userId,
         createdAt: token.createdAt,

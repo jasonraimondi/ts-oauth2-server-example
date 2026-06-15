@@ -15,9 +15,17 @@ import { sign, verify } from "hono/jwt";
  */
 const DEV_SECRET = "dev-insecure-session-secret-change-me";
 
-function resolveSessionSecret(): string {
+export function resolveSessionSecret(): string {
   const fromEnv = process.env.SESSION_SECRET?.trim();
-  if (fromEnv) return fromEnv;
+  if (fromEnv && fromEnv !== DEV_SECRET) return fromEnv;
+  // Fail closed in production: a missing or default secret means forgeable session
+  // cookies (HS256 with a publicly-known key), so refuse to boot rather than warn
+  // and carry on.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET must be set to a non-default value in production (refusing the insecure dev default).",
+    );
+  }
   console.warn(
     "[session] SESSION_SECRET not set — using an insecure hardcoded dev default; set SESSION_SECRET in production.",
   );
@@ -31,18 +39,28 @@ const AUDIENCE = "session";
 export type SessionClaims = {
   sub: string; // the authenticated user's id
   typ: "session"; // distinguishes a session cookie from an OIDC id_token/access token
+  ver: number; // the user's tokenVersion at sign time; bumping it revokes the cookie
   iss: string;
   aud: string;
   iat: number;
   exp: number;
 };
 
-/** Mint an HS256 session JWT for `userId`, valid for `ttlSeconds`. */
-export async function signSession(userId: string, ttlSeconds: number): Promise<string> {
+/**
+ * Mint an HS256 session JWT for `userId`, valid for `ttlSeconds`, bound to the
+ * user's current `tokenVersion`. A later bump of that version invalidates this
+ * cookie (see verifySession + currentUser).
+ */
+export async function signSession(
+  userId: string,
+  ttlSeconds: number,
+  tokenVersion: number,
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const claims: SessionClaims = {
     sub: userId,
     typ: "session",
+    ver: tokenVersion,
     iss: ISSUER,
     aud: AUDIENCE,
     iat: now,
@@ -52,16 +70,24 @@ export async function signSession(userId: string, ttlSeconds: number): Promise<s
 }
 
 /**
- * Verify a session cookie and return its `sub`, or undefined when the token is
- * invalid/expired or is NOT a session token (e.g. someone tried to pass an
- * id_token). hono/jwt's verify enforces exp/iss/aud; we additionally assert
- * `typ === "session"` so the two token kinds can never be swapped.
+ * Verify a session cookie and return its `sub` + `ver`, or undefined when the
+ * token is invalid/expired or is NOT a session token (e.g. someone tried to pass
+ * an id_token). hono/jwt's verify enforces exp/iss/aud; we additionally assert
+ * `typ === "session"` so the two token kinds can never be swapped. The caller
+ * compares `ver` against the user's live tokenVersion to honor revocation.
  */
-export async function verifySession(token: string): Promise<string | undefined> {
+export async function verifySession(
+  token: string,
+): Promise<{ sub: string; ver: number } | undefined> {
   try {
     const claims = await verify(token, SECRET, { alg: "HS256", iss: ISSUER, aud: AUDIENCE });
-    if (claims.typ !== "session" || typeof claims.sub !== "string") return undefined;
-    return claims.sub;
+    if (
+      claims.typ !== "session" ||
+      typeof claims.sub !== "string" ||
+      typeof claims.ver !== "number"
+    )
+      return undefined;
+    return { sub: claims.sub, ver: claims.ver };
   } catch {
     return undefined;
   }

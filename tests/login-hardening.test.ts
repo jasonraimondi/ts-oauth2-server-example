@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { oauthClients, oauthClientScopes, users } from "../src/db/schema.js";
+import { setPassword } from "../src/lib/password.js";
 import { formHeaders, mintJid, pkce } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
@@ -76,7 +77,8 @@ describe("confidential client positive flow (ITEM F)", () => {
     await db.insert(oauthClients).values({
       id: tempId,
       name: "Confidential Client",
-      secret,
+      // Stored as a bcrypt hash at rest; the plaintext is presented below. (ADR-0001.)
+      secret: await setPassword(secret),
       redirectUris: [REDIRECT],
       allowedGrants: ["authorization_code", "refresh_token"],
     });
