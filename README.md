@@ -24,7 +24,7 @@ An example implementation of [@jmondi/oauth2-server](https://github.com/jasonrai
 - **Database** — PostgreSQL via [Drizzle ORM](https://orm.drizzle.team) (postgres.js driver).
 - **Views** — server-rendered login + consent forms using [Hono JSX](https://hono.dev/docs/guides/jsx).
 - **Tests** — [Vitest](https://vitest.dev) integration suite running against a real Postgres test database.
-- **Client** — SvelteKit (Svelte 5) app in [`web/`](web/).
+- **Client** — SvelteKit (Svelte 5) app in [`example-client/`](example-client/).
 
 The OAuth2 HTTP endpoints bridge Hono's Fetch `Request`/`Response` to the package via the `@jmondi/oauth2-server/vanilla` adapter (`requestFromVanilla` / `responseToVanilla` / `handleVanillaError`).
 
@@ -55,7 +55,7 @@ OIDC is enabled on the authorization-code flow. Requesting the `openid` scope ad
 cp -n .env.example .env   # the defaults already match the bundled docker-compose
 
 pnpm install
-cd web && pnpm install && cd ..   # the web client is a standalone pnpm project
+cd example-client && pnpm install && cd ..   # the client is a standalone pnpm project
 
 docker compose up -d      # Postgres on localhost:8888
 pnpm db:migrate
@@ -66,7 +66,7 @@ Then run both processes. The simplest path is two terminals:
 
 ```bash
 pnpm dev                  # server on http://localhost:3000 (tsx watch)
-cd web && pnpm dev        # client on http://localhost:5173
+cd example-client && pnpm dev   # client on http://localhost:5173
 ```
 
 Or run both at once with a Procfile manager — [Overmind](https://github.com/DarthSim/overmind) (`brew install overmind`) or [Foreman](https://github.com/ddollar/foreman) (`gem install foreman`):
@@ -143,7 +143,7 @@ curl -s http://localhost:3000/api/oauth2/token \
 
 ## The Backend-for-Frontend (BFF)
 
-The SvelteKit app in [`web/`](web/) is a **Backend-for-Frontend**, not a token-holding SPA. Its server side is a **confidential** OAuth client: it runs Authorization Code + PKCE, validates the `id_token` (`iss`/`aud`/`exp`/`nonce`, RS256-pinned via [`jose`](https://github.com/panva/jose)), and keeps the access/refresh/id tokens **server-side**. The browser receives only an opaque `HttpOnly; Secure; SameSite=Strict` session cookie and talks exclusively to same-origin BFF endpoints:
+The SvelteKit app in [`example-client/`](example-client/) is a **Backend-for-Frontend**, not a token-holding SPA. Its server side is a **confidential** OAuth client: it runs Authorization Code + PKCE, validates the `id_token` (`iss`/`aud`/`exp`/`nonce`, RS256-pinned via [`jose`](https://github.com/panva/jose)), and keeps the access/refresh/id tokens **server-side**. The browser receives only an opaque `HttpOnly; Secure; SameSite=Strict` session cookie and talks exclusively to same-origin BFF endpoints:
 
 | Route                | Purpose                                                                          |
 | -------------------- | -------------------------------------------------------------------------------- |
@@ -153,7 +153,7 @@ The SvelteKit app in [`web/`](web/) is a **Backend-for-Frontend**, not a token-h
 | `GET /api/contacts`  | proxies the protected resource, attaching the Bearer token (refreshing if stale) |
 | `POST /auth/logout`  | revokes the refresh token at the AS and destroys the session                     |
 
-Endpoints come from OIDC **discovery**, never hardcoded. This is exactly the pattern the old in-browser-token caveat recommended — see [ADR-0001](docs/adr/0001-backend-for-frontend.md). The security-critical pieces (id_token validation, the session store) are unit-tested in [`web/src/lib/server`](web/src/lib/server).
+Endpoints come from OIDC **discovery**, never hardcoded. This is exactly the pattern the old in-browser-token caveat recommended — see [ADR-0001](docs/adr/0001-backend-for-frontend.md). The security-critical pieces (id_token validation, the session store) are unit-tested in [`example-client/src/lib/server`](example-client/src/lib/server).
 
 ## Adapting for production
 

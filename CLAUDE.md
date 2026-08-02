@@ -9,7 +9,7 @@ TypeScript OAuth2 server example implementation using a Hono server and a Svelte
 ```bash
 # Install dependencies (the web client is a standalone pnpm project)
 pnpm install
-cd web && pnpm install && cd ..
+cd example-client && pnpm install && cd ..
 
 # Start database
 docker compose up -d
@@ -41,7 +41,7 @@ overmind start  # or foreman start
   - `db/` - Drizzle schema, client, and seed
   - `app/oauth/` - entities, repositories, and services
   - `views/` - server-rendered forms (Hono JSX)
-- `/web` - SvelteKit client application
+- `/example-client` - SvelteKit client application
 - `/drizzle` - Database migrations
 - `/tests` - Vitest integration tests
 
@@ -69,7 +69,7 @@ overmind start  # or foreman start
 ## Development Notes
 
 - Server runs on port 3000 with all routes under the `/api` prefix
-- Web client (`web/`) is a SvelteKit **Backend-for-Frontend**: a confidential OAuth client that holds all tokens server-side (in-memory session store) and exposes same-origin `/auth/*` + `/api/*` endpoints; the browser only ever holds an opaque `sid` cookie (see ADR-0001)
+- Web client (`example-client/`) is a SvelteKit **Backend-for-Frontend**: a confidential OAuth client that holds all tokens server-side (in-memory session store) and exposes same-origin `/auth/*` + `/api/*` endpoints; the browser only ever holds an opaque `sid` cookie (see ADR-0001)
 - Uses ESM modules (`"type": "module"`)
 - OIDC tokens are signed with an RSA key from `OIDC_PRIVATE_KEY` (PEM); if unset, an ephemeral key is generated at boot
 - The session cookie uses a separate `SESSION_SECRET` (HS256); an insecure dev default is used if unset

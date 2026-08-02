@@ -9,7 +9,7 @@ const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const OIDC_CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d";
 // Confidential client for the Backend-for-Frontend (the SvelteKit server). Its
 // secret is stored as a bcrypt hash at rest; the plaintext lives ONLY in the
-// BFF's env (OAUTH_CLIENT_SECRET in web/.env). See ADR-0001.
+// BFF's env (OAUTH_CLIENT_SECRET in example-client/.env). See ADR-0001.
 const BFF_CLIENT_ID = "b1ff0000-0000-4000-8000-000000000001";
 const BFF_CLIENT_SECRET = "bff-dev-secret-change-me";
 const SCOPE_READ_ID = "c3d49dba-53c8-4d08-970f-9c567414732e";

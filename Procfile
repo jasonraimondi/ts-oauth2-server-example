@@ -1,2 +1,2 @@
 server: pnpm dev
-web: cd web; pnpm dev
+web: cd example-client && pnpm dev
