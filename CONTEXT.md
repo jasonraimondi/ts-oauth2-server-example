@@ -43,11 +43,17 @@ The end-user's session _with the Client app_, carried by an opaque `sid` cookie 
 _Avoid_: plain "session".
 
 **Consent**:
-The Resource Owner's explicit per-request approval of requested scopes; never auto-approved.
+The _act_ — the Resource Owner explicitly approving or denying the scopes a Client is requesting.
+_Avoid_: using "consent" for the durable record of that act — that is a **Grant**.
+
+**Grant**:
+The standing authorization a Resource Owner has given one Client: the set of scopes they have approved for it, outliving any single authorization request. A Grant is what lets a later request skip the consent screen.
+_Avoid_: "consent record", "approval", and OAuth's "grant type" (`authorization_code` etc.) — a grant type is a protocol flow, a **Grant** is a Resource Owner's standing permission.
 
 ## Relationships
 
 - A **Resource Owner** authenticates to the **Authorization Server**, producing an **AS Session**.
+- A **Resource Owner** gives **Consent** to a **Client**, producing a **Grant**; a later request covered by that **Grant** needs no further **Consent**.
 - A **BFF** is one **Confidential Client** of the **Authorization Server**.
 - A **BFF** holds tokens and issues the browser a **BFF Session**; the browser never holds tokens.
 - The **BFF** spends an access token against the **Resource Server**; the browser only ever calls the **BFF**.
