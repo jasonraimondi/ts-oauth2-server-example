@@ -44,6 +44,25 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: docker build -t oauth-server:ci .
+      # Boot the image the way production will, so the fail-closed gates
+      # (SESSION_SECRET, OIDC_PRIVATE_KEY, https issuer) are proven satisfiable
+      # from environment alone rather than only in a dev shell.
+      - name: Smoke-test the production image
+        run: |
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ci-oidc-key.pem
+          docker run -d --name oauth-smoke --network host \
+            -e NODE_ENV=production \
+            -e DATABASE_URL=postgresql://oauth:secret@localhost:8888/oauth_example \
+            -e OIDC_ISSUER=https://ci.example.com \
+            -e SESSION_SECRET="$(openssl rand -hex 32)" \
+            -e OIDC_PRIVATE_KEY="$(cat ci-oidc-key.pem)" \
+            oauth-server:ci
+          for _ in $(seq 30); do
+            curl -fsS http://localhost:3000/healthz > /dev/null && break
+            sleep 1
+          done
+          curl -fsS http://localhost:3000/healthz || { docker logs oauth-smoke; exit 1; }
+          docker rm -f oauth-smoke
 
   web:
     runs-on: ubuntu-latest
