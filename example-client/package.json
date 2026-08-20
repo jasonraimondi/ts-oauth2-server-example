@@ -1,10 +1,12 @@
 {
   "name": "jmondi-oauth2-example-client",
   "version": "0.0.1",
+  "packageManager": "pnpm@10.34.5",
   "private": true,
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "start": "node build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -13,7 +15,6 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
-    "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.63.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
