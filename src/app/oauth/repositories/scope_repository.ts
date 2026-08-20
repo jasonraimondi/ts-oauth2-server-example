@@ -22,6 +22,10 @@ export class ScopeRepository implements OAuthScopeRepository {
     return scopes.map(s => new Scope(s));
   }
 
+  // The library's hook for narrowing what a grant may actually carry — drop a
+  // scope this client is not entitled to, or that this user cannot delegate.
+  // Pass-through here on purpose: the seeded clients are entitled to every scope
+  // they can request, and a fork's entitlement rules belong in this method.
   async finalize(
     scopes: OAuthScope[],
     _identifier: GrantIdentifier,

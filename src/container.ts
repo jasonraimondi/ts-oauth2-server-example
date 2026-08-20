@@ -76,7 +76,4 @@ const accessTokenVerifier = new AccessTokenVerifier(jwt, {
   issuer,
 });
 
-// Only the handles other modules actually consume are exported; the repositories
-// are wired into the AuthorizationServer above and don't need to leak out — except
-// tokenRepository + accessTokenVerifier, which the /api/contacts resource consumes.
 export { authorizationServer, db, jwt, userRepository, tokenRepository, accessTokenVerifier };

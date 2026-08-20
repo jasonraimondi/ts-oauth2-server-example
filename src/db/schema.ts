@@ -22,9 +22,6 @@ export const grantTypes = pgEnum("grant_types", [
 
 export const codeChallengeMethod = pgEnum("code_challenge_method", ["S256", "plain"]);
 
-// Column DB names are derived from the camelCase keys by `casing: "snake_case"`
-// (set on the drizzle() client and in drizzle.config.ts), so `passwordHash`
-// becomes the `password_hash` column without spelling it out here.
 export const users = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
   email: varchar({ length: 255 }).notNull().unique(),

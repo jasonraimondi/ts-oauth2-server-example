@@ -15,6 +15,9 @@ const schema = z.object({
     .default("http://localhost:3000"),
   OIDC_PRIVATE_KEY: z.string().min(1).optional(),
   SESSION_SECRET: z.string().min(32).optional(),
+  // The test suite hashes a password on nearly every request, where cost 12 costs
+  // more wall-clock than everything else combined; production floors it back to 12.
+  BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
   LOGIN_RATE_MAX: z.coerce.number().int().positive().default(10),
   TOKEN_RATE_MAX: z.coerce.number().int().positive().default(60),
   // stringbool, not coerce.boolean: Boolean("false") is true, which would silently

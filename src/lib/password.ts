@@ -1,6 +1,11 @@
 import bcrypt from "bcrypt";
 
-export const BCRYPT_COST = 12;
+import { env, isDev } from "./config.js";
+
+// Raising the cost is always allowed; lowering it is a local-only convenience, so
+// outside development the configured value can only move the tax up, never down.
+const MINIMUM_COST = 12;
+export const BCRYPT_COST = isDev() ? env.BCRYPT_COST : Math.max(env.BCRYPT_COST, MINIMUM_COST);
 
 // A value no login form can submit as a valid credential, hashed once at import
 // so verifyDummyPassword() below costs exactly one real bcrypt comparison.
