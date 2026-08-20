@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 
-import { db } from "./index.js";
+import { closeDb, db } from "./index.js";
 import { oauthClients, oauthClientScopes, oauthScopes, users } from "./schema.js";
 import { setPassword } from "../lib/password.js";
 
@@ -100,5 +100,5 @@ export async function seed(database: typeof db = db): Promise<void> {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   await seed();
-  process.exit(0);
+  await closeDb();
 }
