@@ -7,7 +7,6 @@ import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, ilike, sql } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 import { isIP } from "node:net";
 
 import { html } from "hono/html";
@@ -28,12 +27,16 @@ import {
   userRepository,
 } from "./container.js";
 import { users } from "./db/schema.js";
-import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
+import {
+  verifyPasswordOrThrow,
+  verifyDummyPassword,
+  InvalidAuthorizationError,
+} from "./lib/password.js";
 import type { User } from "./app/oauth/entities/user.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
-import { requireScope } from "./lib/require_scope.js";
 import { clientIp } from "./lib/client_ip.js";
+import { requireScope } from "./lib/require_scope.js";
 import { accessLog, logJson } from "./lib/logger.js";
 import { signSession, SESSION_COOKIE_NAME, sessionCookiePrefix } from "./lib/session.js";
 import { env, isDev } from "./lib/config.js";
@@ -47,11 +50,9 @@ const queryString = (c: Context): string => new URL(c.req.url).search;
 // Session cookie lifetime: 30 days, matching the refresh-token window.
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-// A pre-computed bcrypt hash of a value no user will ever submit. The login
-// handler compares against this when a user (or its passwordHash) is missing, so
-// an unknown email costs the same bcrypt round as a known one — closing the
-// user-enumeration timing oracle.
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync("a-password-that-is-never-valid", 12);
+// Every credential failure answers with this one sentence, so the page can never
+// tell an unknown email apart from a wrong password.
+const LOGIN_FAILED = "Email or password is incorrect.";
 
 export const app = new Hono<AppEnv>();
 
@@ -223,14 +224,39 @@ app.use("/api/login", csrf());
 app.use("/api/scopes", csrf());
 app.use("/api/logout", csrf());
 
+const renderLogin = (
+  c: Context,
+  status: 200 | 400 | 401,
+  props: { error?: string; email?: string } = {},
+) =>
+  c.html(
+    html`<!DOCTYPE html>${(<Login action={"/api/login" + queryString(c)} {...props} />)}`,
+    status,
+  );
+
 app.get("/api/login", async c => {
   await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-  return c.html(html`<!DOCTYPE html>${(<Login action={"/api/login" + queryString(c)} />)}`);
+  return renderLogin(c, 200);
 });
 
 app.post(
   "/api/login",
-  zValidator("form", z.object({ email: z.email(), password: z.string() })),
+  zValidator(
+    "form",
+    // The password is capped because bcrypt is deliberately slow: unbounded input
+    // is a lever for making the server burn CPU on demand.
+    z.object({ email: z.email(), password: z.string().min(1).max(256) }),
+    (result, c) => {
+      if (result.success) return;
+      // Without a hook a malformed form answers with raw zod JSON, throwing away
+      // the authorize query string the user needs in order to continue.
+      const email = typeof result.data?.email === "string" ? result.data.email : undefined;
+      return renderLogin(c, 400, {
+        error: "Enter a valid email address and your password.",
+        email,
+      });
+    },
+  ),
   async c => {
     // Validate the authorize params from the QUERY only; building a body-less
     // request avoids consuming the form body that zValidator already parsed.
@@ -242,17 +268,22 @@ app.post(
 
     const row = await db.query.users.findFirst({ where: ilike(users.email, email) });
 
-    // Always run a bcrypt comparison — against the real hash, or a dummy hash
-    // when the user is missing or has no password — so the response time can't
-    // distinguish "no such user" from "wrong password" (user-enumeration oracle).
-    // Both failures collapse to one generic 401, never a 500/stack trace.
+    // An unknown email — or an account with no password, e.g. SSO-only — still
+    // costs one bcrypt round, or the response time would tell an attacker which
+    // addresses are registered. Both branches answer with the same sentence.
+    if (!row?.passwordHash) {
+      await verifyDummyPassword();
+      return renderLogin(c, 401, { error: LOGIN_FAILED, email });
+    }
+
     try {
-      await verifyPasswordOrThrow(password, row?.passwordHash ?? DUMMY_PASSWORD_HASH);
+      await verifyPasswordOrThrow(password, row.passwordHash);
     } catch (e) {
-      if (e instanceof InvalidAuthorizationError) return c.text("Unauthorized", 401);
+      if (e instanceof InvalidAuthorizationError) {
+        return renderLogin(c, 401, { error: LOGIN_FAILED, email });
+      }
       throw e;
     }
-    if (!row) return c.text("Unauthorized", 401);
 
     await recordLogin(c, row.id);
 
