@@ -39,6 +39,10 @@ const authorizationServer = new AuthorizationServer(
       tokenEndpoint: `${issuer}/api/oauth2/token`,
       userinfoEndpoint: `${issuer}/api/oauth2/userinfo`,
       jwksUri: `${issuer}/.well-known/jwks.json`,
+      // Not part of the OIDC core document the library builds, but the endpoint
+      // is implemented, so advertise it (RFC 7009 §2) rather than making clients
+      // guess the path.
+      metadata: { revocation_endpoint: `${issuer}/api/oauth2/revoke` },
       // Return only attributes we actually store; the library filters them by the
       // granted scopes (email -> email, profile -> name) before serving /userinfo.
       getUserClaims: async subject => {

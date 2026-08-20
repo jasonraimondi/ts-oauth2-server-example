@@ -63,6 +63,9 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     );
     expect(payload.scope).toContain("contacts.read");
     expect(payload.scope).toContain("contacts.write");
+    // Access tokens reach every resource server and its logs, so they carry no
+    // identity claims — email lives in the id_token and behind /userinfo.
+    expect(payload.email).toBeUndefined();
   });
 
   it("drives UC-2..UC-5 through the login POST with no pre-minted cookie", async () => {

@@ -64,6 +64,7 @@ describe("OIDC discovery document", () => {
     expect(doc.token_endpoint).toBe(`${ISSUER}/api/oauth2/token`);
     expect(doc.userinfo_endpoint).toBe(`${ISSUER}/api/oauth2/userinfo`);
     expect(doc.jwks_uri).toBe(`${ISSUER}/.well-known/jwks.json`);
+    expect(doc.revocation_endpoint).toBe(`${ISSUER}/api/oauth2/revoke`);
     expect(doc.id_token_signing_alg_values_supported).toContain("RS256");
     expect(doc.scopes_supported).toEqual(expect.arrayContaining(["openid", "email", "profile"]));
   });

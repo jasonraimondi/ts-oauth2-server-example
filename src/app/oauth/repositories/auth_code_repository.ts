@@ -48,7 +48,9 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       nonce: null,
       authTime: null,
       maxAge: null,
-      expiresAt: new DateInterval("15m").getEndDate(),
+      // Placeholder: the library overwrites this with its own authCodeTTL before
+      // persist. 10 minutes is the ceiling RFC 6749 §4.1.2 recommends.
+      expiresAt: new DateInterval("10m").getEndDate(),
       client,
       clientId: client.id,
       user,
