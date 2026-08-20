@@ -16,13 +16,20 @@ import {
   responseToVanilla,
   handleVanillaError,
 } from "@jmondi/oauth2-server/vanilla";
-import { OAuthException, type AccessTokenPayload } from "@jmondi/oauth2-server";
+import { OAuthException } from "@jmondi/oauth2-server";
 
-import { authorizationServer, db, accessTokenVerifier, tokenRepository } from "./container.js";
+import {
+  authorizationServer,
+  db,
+  accessTokenVerifier,
+  tokenRepository,
+  userRepository,
+} from "./container.js";
 import { users } from "./db/schema.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
+import { requireScope } from "./lib/require_scope.js";
 import { accessLog, logJson } from "./lib/logger.js";
 import { signSession } from "./lib/session.js";
 import { env, isDev } from "./lib/config.js";
@@ -47,7 +54,7 @@ export const app = new Hono<AppEnv>();
 app.use(requestId());
 app.use(accessLog);
 app.use(bodyLimit({ maxSize: 64 * 1024 }));
-app.use(currentUser);
+app.use(currentUser(userRepository));
 
 // One error boundary for the whole app: the package's handleVanillaError maps
 // OAuthExceptions to their RFC body shape and wraps anything else into a proper
@@ -129,49 +136,11 @@ const CONTACTS = [
   { name: "Alan Turing", email: "alan@example.com" },
 ];
 
-// RFC 6750 invalid_token (401) without echoing the token value.
-const bearerUnauthorized = (c: Context, description: string) =>
-  c.json({ error: "invalid_token", error_description: description }, 401, {
-    "www-authenticate": `Bearer error="invalid_token", error_description="${description}"`,
-  });
-
-// Scoped resource: requires a valid, non-revoked Bearer access token carrying the
-// contacts.read scope. Mirrors the /userinfo validation (AccessTokenVerifier pins
-// typ:at+jwt, alg:RS256, iss; revocation guard via the token row) and adds the
-// scope check the BFF will exercise.
-app.get("/api/contacts", async c => {
-  const authHeader = c.req.header("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return bearerUnauthorized(c, "A bearer access token is required.");
-  }
-
-  let payload: AccessTokenPayload;
-  try {
-    payload = await accessTokenVerifier.verify(authHeader);
-    // The JWT jti is the stored access-token row; a revoked (force-expired) row
-    // must be rejected even while the JWT itself is still within its exp window.
-    const stored = await tokenRepository.getByAccessToken(payload.jti as string);
-    if (await tokenRepository.isAccessTokenRevoked(stored)) {
-      return bearerUnauthorized(c, "The access token has been revoked.");
-    }
-  } catch (e) {
-    if (e instanceof OAuthException) {
-      return bearerUnauthorized(c, "The access token is invalid or expired.");
-    }
-    throw e;
-  }
-
-  const scopes = (typeof payload.scope === "string" ? payload.scope : "").split(" ");
-  if (!scopes.includes("contacts.read")) {
-    return c.json(
-      { error: "insufficient_scope", error_description: "The contacts.read scope is required." },
-      403,
-      { "www-authenticate": `Bearer error="insufficient_scope", scope="contacts.read"` },
-    );
-  }
-
-  return c.json(CONTACTS);
-});
+app.get(
+  "/api/contacts",
+  requireScope("contacts.read", { verifier: accessTokenVerifier, tokens: tokenRepository }),
+  c => c.json(CONTACTS),
+);
 
 app.get("/api/oauth2/authorize", async c => {
   // Validate up front so a malformed authorize request fails before we send the
