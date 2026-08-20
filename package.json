@@ -1,5 +1,6 @@
 {
   "name": "jmondi-oauth2-example-server",
+  "license": "MIT",
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -11,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:seed": "tsx src/db/seed.ts",
+    "db:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
