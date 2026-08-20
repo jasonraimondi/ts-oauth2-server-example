@@ -18,7 +18,7 @@ import {
   responseToVanilla,
   handleVanillaError,
 } from "@jmondi/oauth2-server/vanilla";
-import { OAuthException } from "@jmondi/oauth2-server";
+import { OAuthException, type AuthorizationRequest } from "@jmondi/oauth2-server";
 
 import {
   authorizationServer,
@@ -29,6 +29,7 @@ import {
 } from "./container.js";
 import { users } from "./db/schema.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
+import type { User } from "./app/oauth/entities/user.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
 import { requireScope } from "./lib/require_scope.js";
@@ -168,13 +169,51 @@ app.get(
   c => c.json(CONTACTS),
 );
 
+// OIDC Core §3.1.2.1 leaves `prompt` and `max_age` for the application to
+// enforce; the library only parses them onto the request.
+const promptValues = (authRequest: AuthorizationRequest): Set<string> =>
+  new Set((authRequest.prompt ?? "").split(" ").filter(Boolean));
+
+/**
+ * Whether the browser session may answer this authorize request: the user is
+ * logged in, the client did not demand a fresh login, and that login is younger
+ * than `max_age`. A session failing any of these counts as logged out.
+ */
+function sessionSatisfies(authRequest: AuthorizationRequest, user: User | undefined): user is User {
+  if (!user) return false;
+  if (promptValues(authRequest).has("login")) return false;
+  if (authRequest.maxAge === undefined) return true;
+  if (!user.lastLoginAt) return false;
+  return (Date.now() - user.lastLoginAt.getTime()) / 1000 <= authRequest.maxAge;
+}
+
+// RFC 6749 §4.1.2.1 error redirect back to the (already validated) client
+// redirect_uri, echoing state so the client can correlate the response.
+// redirectUri is guaranteed resolved by validateAuthorizationRequest; fall back to
+// the client's first registered redirect_uri to avoid a non-null assertion.
+function errorRedirect(c: Context, authRequest: AuthorizationRequest, error: string): Response {
+  const target = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]);
+  target.searchParams.set("error", error);
+  if (authRequest.state) target.searchParams.set("state", authRequest.state);
+  return c.redirect(target.toString(), 302);
+}
+
+// prompt=none forbids any user-visible UI, so a session that cannot answer the
+// request must come back as an error on the redirect_uri, never as a login page.
+const reauthenticate = (c: Context, authRequest: AuthorizationRequest): Response =>
+  promptValues(authRequest).has("none")
+    ? errorRedirect(c, authRequest, "login_required")
+    : c.redirect("/api/login" + queryString(c), 302);
+
 app.get("/api/oauth2/authorize", async c => {
   // Validate up front so a malformed authorize request fails before we send the
-  // user through login/consent. With a session, route to the consent screen
-  // (carrying the original query); without one, to login. We never auto-approve.
-  await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-  const target = c.get("user") ? "/api/scopes" : "/api/login";
-  return c.redirect(`${target}${queryString(c)}`, 302);
+  // user through login/consent. With a usable session, route to the consent
+  // screen (carrying the original query). We never auto-approve.
+  const authRequest = await authorizationServer.validateAuthorizationRequest(
+    await requestFromVanilla(c.req.raw),
+  );
+  if (!sessionSatisfies(authRequest, c.get("user"))) return reauthenticate(c, authRequest);
+  return c.redirect("/api/scopes" + queryString(c), 302);
 });
 
 // Origin-based CSRF, scoped ONLY to the browser form routes (never the
@@ -182,6 +221,7 @@ app.get("/api/oauth2/authorize", async c => {
 // Origin header against the request host for unsafe methods.
 app.use("/api/login", csrf());
 app.use("/api/scopes", csrf());
+app.use("/api/logout", csrf());
 
 app.get("/api/login", async c => {
   await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
@@ -280,12 +320,18 @@ app.get("/api/scopes", async c => {
   const authRequest = await authorizationServer.validateAuthorizationRequest(
     await requestFromVanilla(c.req.raw),
   );
+  const user = c.get("user");
+  // An anonymous visitor gets no consent screen: it enumerates clients and scopes,
+  // and there is nobody here who can answer it.
+  if (!sessionSatisfies(authRequest, user)) return reauthenticate(c, authRequest);
+
   return c.html(
     html`<!DOCTYPE html>${(
         <Scopes
           action={"/api/scopes" + queryString(c)}
           client={authRequest.client}
           scopes={authRequest.scopes}
+          userEmail={user.email}
         />
       )}`,
   );
@@ -301,9 +347,8 @@ app.post(
     );
 
     const user = c.get("user");
-    if (!user) {
-      return c.redirect("/api/login" + queryString(c), 302);
-    }
+    if (!sessionSatisfies(authRequest, user)) return reauthenticate(c, authRequest);
+
     authRequest.user = user;
     // OIDC auth_time: when the end-user last authenticated. Falls back to now for
     // pre-existing sessions that predate a recorded login.
@@ -317,14 +362,7 @@ app.post(
     }
 
     // Deny: the authorization_code grant's completeAuthorizationRequest would
-    // surface a generic 400 here, so emit the RFC 6749 error redirect ourselves —
-    // bounce back to the (already validated) client redirect_uri with
-    // error=access_denied, echoing state so the client can correlate the response.
-    // redirectUri is guaranteed resolved by validateAuthorizationRequest above; fall
-    // back to the client's first registered redirect_uri to avoid a non-null assertion.
-    const denied = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]);
-    denied.searchParams.set("error", "access_denied");
-    if (authRequest.state) denied.searchParams.set("state", authRequest.state);
-    return c.redirect(denied.toString(), 302);
+    // surface a generic 400 here, so emit the RFC 6749 error redirect ourselves.
+    return errorRedirect(c, authRequest, "access_denied");
   },
 );

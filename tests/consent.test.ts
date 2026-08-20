@@ -65,6 +65,30 @@ describe("consent screen (GET /api/scopes)", () => {
     expect(body).toContain('value="yes"'); // approve button
     expect(body).toContain('value="no"'); // deny button
   });
+
+  it("names the signed-in user so consent shows who is granting access", async () => {
+    const { challenge } = pkce();
+    const jid = await mintJid();
+
+    const res = await app.request(`/api/scopes?${authorizeQuery(challenge)}`, {
+      headers: { Cookie: `jid=${jid}` },
+    });
+
+    expect(await res.text()).toContain("jason@example.com");
+  });
+
+  it("redirects an anonymous visitor to login instead of rendering the form", async () => {
+    // Rendering consent to a stranger enumerates clients and scopes, and nobody
+    // is there who could answer the form anyway.
+    const { challenge } = pkce();
+
+    const res = await app.request(`/api/scopes?${authorizeQuery(challenge)}`, {
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")!.startsWith("/api/login?")).toBe(true);
+  });
 });
 
 describe("consent decision (POST /api/scopes)", () => {
