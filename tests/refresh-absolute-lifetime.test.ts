@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db } from "../src/db/index.js";
 import { oauthTokens } from "../src/db/schema.js";
-import { approveAuthorize, mintJid, pkce } from "./helpers.js";
+import { approveAuthorize, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -37,10 +37,10 @@ async function initialTokens(
     }),
   });
   expect(tokenRes.status).toBe(200);
-  return tokenRes.json();
+  return readJson(tokenRes);
 }
 
-function refresh(refreshToken: string): Promise<Response> {
+async function refresh(refreshToken: string): Promise<Response> {
   return app.request("/api/oauth2/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -83,7 +83,7 @@ describe("absolute refresh-token family lifetime", () => {
   it("keeps the full rolling window for a family that just started", async () => {
     const first = await initialTokens("fresh-family");
 
-    const rotated = await (await refresh(first.refresh_token)).json();
+    const rotated = await readJson(await refresh(first.refresh_token));
 
     const expiresAt = await refreshExpiryOf(rotated.access_token);
     const daysOut = (expiresAt.getTime() - Date.now()) / DAY_MS;
@@ -94,7 +94,7 @@ describe("absolute refresh-token family lifetime", () => {
     const first = await initialTokens("old-family");
     await backdateFamily(await familyOf(first.access_token), 29);
 
-    const rotated = await (await refresh(first.refresh_token)).json();
+    const rotated = await readJson(await refresh(first.refresh_token));
 
     // The family started 29 days ago, so ~1 day of its 30-day budget remains —
     // not the full 30 the rolling window would otherwise re-stamp.
@@ -108,7 +108,7 @@ describe("absolute refresh-token family lifetime", () => {
     const first = await initialTokens("expired-family");
     await backdateFamily(await familyOf(first.access_token), 31);
 
-    const rotated = await (await refresh(first.refresh_token)).json();
+    const rotated = await readJson(await refresh(first.refresh_token));
 
     // The ceiling is already behind us, so the rotated token is born expired and
     // the next refresh has nothing live to rotate.

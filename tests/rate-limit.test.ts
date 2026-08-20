@@ -16,7 +16,11 @@ function appWith(max: number, extra: Extra = { key: testKey }): Hono {
   return a;
 }
 
-function hit(a: Hono, headers: Record<string, string> = {}, method = "POST"): Promise<Response> {
+async function hit(
+  a: Hono,
+  headers: Record<string, string> = {},
+  method = "POST",
+): Promise<Response> {
   return a.request("/x", { method, headers });
 }
 

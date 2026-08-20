@@ -190,10 +190,10 @@ function sessionSatisfies(authRequest: AuthorizationRequest, user: User | undefi
 
 // RFC 6749 §4.1.2.1 error redirect back to the (already validated) client
 // redirect_uri, echoing state so the client can correlate the response.
-// redirectUri is guaranteed resolved by validateAuthorizationRequest; fall back to
-// the client's first registered redirect_uri to avoid a non-null assertion.
+// redirectUri is guaranteed resolved by validateAuthorizationRequest; the fall back
+// to the client's first registered redirect_uri is only there for the impossible case.
 function errorRedirect(c: Context, authRequest: AuthorizationRequest, error: string): Response {
-  const target = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]);
+  const target = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]!);
   target.searchParams.set("error", error);
   if (authRequest.state) target.searchParams.set("state", authRequest.state);
   return c.redirect(target.toString(), 302);

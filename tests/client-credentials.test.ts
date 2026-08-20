@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
+import { readJson } from "./helpers.js";
 
 // The library auto-enables client_credentials server-wide before enableGrantTypes
 // runs, so per-client allowedGrants is the only thing keeping the grant closed.
@@ -18,7 +19,7 @@ const SEEDED_CLIENTS = [
 describe("client_credentials grant", () => {
   it("is absent from the discovery document", async () => {
     const res = await app.request("/.well-known/openid-configuration");
-    const doc = await res.json();
+    const doc = await readJson(res);
 
     expect(doc.grant_types_supported).not.toContain("client_credentials");
   });

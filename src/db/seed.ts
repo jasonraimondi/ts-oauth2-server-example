@@ -103,7 +103,7 @@ export async function seed(database: typeof db = db): Promise<void> {
     .onConflictDoNothing();
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
   await seed();
   await closeDb();
 }

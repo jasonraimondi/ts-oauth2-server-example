@@ -33,7 +33,16 @@ export const formHeaders = {
 // Pull the jid value out of a Set-Cookie header (`jid=<value>; HttpOnly; ...`).
 export function jidFromSetCookie(setCookie: string): string {
   const match = /(?:^|,\s*)jid=([^;]+)/.exec(setCookie);
-  return match![1];
+  return match![1]!;
+}
+
+/**
+ * Read a JSON body at the shape the endpoint documents. `Response.json()` is
+ * typed `unknown`, so every assertion on a body would otherwise need its own
+ * cast; asserting against a wrong shape still fails the test, which is the point.
+ */
+export async function readJson<T = Record<string, any>>(res: Response): Promise<T> {
+  return (await res.json()) as T;
 }
 
 /**

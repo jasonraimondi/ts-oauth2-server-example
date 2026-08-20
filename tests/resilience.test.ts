@@ -5,7 +5,7 @@ import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { oauthClients, oauthAuthCodes, oauthTokens } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
-import { codeFromApprove, mintJid, pkce } from "./helpers.js";
+import { codeFromApprove, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -64,7 +64,7 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(500);
 
-      const json = await res.json();
+      const json = await readJson(res);
       expect(json.error).toEqual(expect.any(String));
       expect(json.error_description).toEqual(expect.any(String));
     } finally {
@@ -83,7 +83,7 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     await db
       .update(oauthAuthCodes)
       .set({ expiresAt: new Date(0) })
-      .where(eq(oauthAuthCodes.code, authCodeRow.code));
+      .where(eq(oauthAuthCodes.code, authCodeRow!.code));
 
     const res = await postToken({
       grant_type: "authorization_code",
@@ -98,7 +98,7 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.error).toEqual(expect.any(String));
     expect(json.error_description).toEqual(expect.any(String));
   });
@@ -114,7 +114,7 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
       code,
       code_verifier: verifier,
     });
-    const { refresh_token } = await tokenRes.json();
+    const { refresh_token } = await readJson(tokenRes);
     expect(refresh_token).toEqual(expect.any(String));
 
     // The response refresh_token is an encrypted JWT, not the stored column
@@ -124,7 +124,7 @@ describe("resilience: OAuth error mapping (negative paths)", () => {
     await db
       .update(oauthTokens)
       .set({ refreshTokenExpiresAt: new Date(0) })
-      .where(eq(oauthTokens.accessToken, tokenRow.accessToken));
+      .where(eq(oauthTokens.accessToken, tokenRow!.accessToken));
 
     const res = await postToken({
       grant_type: "refresh_token",
@@ -198,7 +198,7 @@ describe("resilience: OAuthException maps through the bridge for token AND revok
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.error).toEqual(expect.any(String));
     expect(json.error_description).toEqual(expect.any(String));
   });
@@ -218,7 +218,7 @@ describe("resilience: OAuthException maps through the bridge for token AND revok
     // must not surface as an unhandled 500. If it is a 4xx, it must be mapped.
     expect(res.status).not.toBe(500);
     if (res.status >= 400 && res.status < 500) {
-      const json = await res.json();
+      const json = await readJson(res);
       expect(json.error).toEqual(expect.any(String));
       expect(json.error_description).toEqual(expect.any(String));
     }
@@ -257,7 +257,7 @@ describe("resilience: unknown credentials map to typed OAuth errors (not 500, no
       code,
       code_verifier: verifier,
     });
-    const { refresh_token } = await tokenRes.json();
+    const { refresh_token } = await readJson(tokenRes);
     expect(refresh_token).toEqual(expect.any(String));
 
     // Delete the stored token row so the (still-valid) refresh-token JWT resolves
@@ -274,6 +274,6 @@ describe("resilience: unknown credentials map to typed OAuth errors (not 500, no
     expect(res.status).not.toBe(500);
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
-    expect((await res.json()).error).toEqual(expect.any(String));
+    expect((await readJson(res)).error).toEqual(expect.any(String));
   });
 });

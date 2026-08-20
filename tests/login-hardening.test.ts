@@ -5,7 +5,7 @@ import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { oauthClients, oauthClientScopes, users } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
-import { formHeaders, mintJid, pkce } from "./helpers.js";
+import { formHeaders, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -148,7 +148,7 @@ describe("confidential client positive flow (ITEM F)", () => {
       });
 
       expect(tokenRes.status).toBe(200);
-      const json = await tokenRes.json();
+      const json = await readJson(tokenRes);
       expect(json.access_token).toEqual(expect.any(String));
       expect(json.token_type).toBe("Bearer");
       expect(json.scope).toContain("contacts.read");

@@ -43,7 +43,7 @@ export async function prune(database: typeof db = db, now = new Date()): Promise
   return { tokens: tokens.length, authCodes: authCodes.length };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
   const counts = await prune();
   console.log(JSON.stringify({ msg: "pruned expired oauth rows", ...counts }));
   await closeDb();

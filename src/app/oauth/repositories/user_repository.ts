@@ -15,7 +15,7 @@ import { verifyPasswordOrThrow, InvalidAuthorizationError } from "../../../lib/p
 // can degrade gracefully on "no such user" while letting infrastructure errors
 // surface instead of silently swallowing them.
 export class NotFoundError extends Error {
-  name = "NotFoundError";
+  override name = "NotFoundError";
 }
 
 export class UserRepository implements OAuthUserRepository {

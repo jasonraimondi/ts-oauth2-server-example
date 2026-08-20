@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
-import type { OAuthAuthCode, OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
+import type { OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
 import { oauthAuthCodes, oauthAuthCodeScopes } from "../../../db/schema.js";
@@ -39,7 +39,7 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
     return authCode.isExpired;
   }
 
-  issueAuthCode(client: Client, user: User | undefined, scopes: Scope[]): OAuthAuthCode {
+  issueAuthCode(client: Client, user: User | undefined, scopes: Scope[]): AuthCode {
     return new AuthCode({
       redirectUri: null,
       code: generateRandomToken(),

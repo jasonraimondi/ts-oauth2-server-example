@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { approveAuthorize, formHeaders, jidFromSetCookie, mintJid, pkce } from "./helpers.js";
+import {
+  approveAuthorize,
+  formHeaders,
+  jidFromSetCookie,
+  mintJid,
+  pkce,
+  readJson,
+} from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -49,7 +56,7 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     const tokenRes = await exchangeCode(code, verifier);
 
     expect(tokenRes.status).toBe(200);
-    const json = await tokenRes.json();
+    const json = await readJson(tokenRes);
     expect(json.access_token).toEqual(expect.any(String));
     expect(json.refresh_token).toEqual(expect.any(String));
     expect(json.token_type).toBe("Bearer");
@@ -100,7 +107,7 @@ describe("full authorization_code + PKCE flow over HTTP", () => {
     // Exchange the code -> tokens with both scopes intact.
     const tokenRes = await exchangeCode(code, verifier);
     expect(tokenRes.status).toBe(200);
-    const json = await tokenRes.json();
+    const json = await readJson(tokenRes);
     expect(json.access_token).toEqual(expect.any(String));
     expect(json.refresh_token).toEqual(expect.any(String));
     expect(json.scope).toContain("contacts.read");
@@ -118,7 +125,7 @@ describe("refresh_token rotation + scope narrowing", () => {
     const code = new URL(authorizeRes.headers.get("location")!).searchParams.get("code")!;
 
     const firstExchange = await exchangeCode(code, verifier);
-    const first = await firstExchange.json();
+    const first = await readJson(firstExchange);
     const originalRefreshToken: string = first.refresh_token;
     expect(first.scope).toContain("contacts.read");
     expect(first.scope).toContain("contacts.write");
@@ -135,7 +142,7 @@ describe("refresh_token rotation + scope narrowing", () => {
     });
 
     expect(refreshRes.status).toBe(200);
-    const refreshed = await refreshRes.json();
+    const refreshed = await readJson(refreshRes);
     // Rotation: a new refresh token is issued, different from the old one.
     expect(refreshed.refresh_token).toEqual(expect.any(String));
     expect(refreshed.refresh_token).not.toBe(originalRefreshToken);

@@ -8,7 +8,7 @@ const DUMMY_PASSWORD = "a-password-that-is-never-valid";
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync(DUMMY_PASSWORD, BCRYPT_COST);
 
 export class InvalidAuthorizationError extends Error {
-  name = "InvalidAuthorizationError";
+  override name = "InvalidAuthorizationError";
 }
 
 export async function setPassword(password: string): Promise<string> {

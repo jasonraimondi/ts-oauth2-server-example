@@ -6,6 +6,7 @@ import { requestFromVanilla, responseToVanilla } from "@jmondi/oauth2-server/van
 
 import { app } from "../src/app.js";
 import { authorizationServer, userRepository } from "../src/container.js";
+import { readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
@@ -59,7 +60,7 @@ describe("POST /api/oauth2/token error mapping", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json).toMatchObject({
       status: res.status,
       error: expect.any(String),
@@ -88,7 +89,7 @@ describe("POST /api/oauth2/token happy path", () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.access_token).toEqual(expect.any(String));
     expect(json.refresh_token).toEqual(expect.any(String));
     expect(json.token_type).toBe("Bearer");
@@ -118,7 +119,7 @@ describe("POST /api/oauth2/token happy path", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.error).toEqual(expect.any(String));
     expect(json.error_description).toEqual(expect.any(String));
   });
@@ -142,7 +143,7 @@ describe("POST /api/oauth2/revoke", () => {
         code_verifier: verifier,
       }),
     });
-    const { refresh_token } = await tokenRes.json();
+    const { refresh_token } = await readJson(tokenRes);
 
     const res = await app.request("/api/oauth2/revoke", {
       method: "POST",

@@ -4,7 +4,14 @@ import { afterAll, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { users } from "../src/db/schema.js";
-import { codeFromApprove, formHeaders, mintJid, pkce, SEEDED_USER_ID } from "./helpers.js";
+import {
+  codeFromApprove,
+  formHeaders,
+  mintJid,
+  pkce,
+  readJson,
+  SEEDED_USER_ID,
+} from "./helpers.js";
 
 const CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d"; // OIDC Demo Client
 const USER_ID = SEEDED_USER_ID;
@@ -17,8 +24,8 @@ function decodeJwt(token: string): {
 } {
   const [header, payload] = token.split(".");
   return {
-    header: JSON.parse(Buffer.from(header, "base64url").toString("utf8")),
-    payload: JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
+    header: JSON.parse(Buffer.from(header!, "base64url").toString("utf8")),
+    payload: JSON.parse(Buffer.from(payload!, "base64url").toString("utf8")),
   };
 }
 
@@ -52,7 +59,7 @@ async function runOpenIdFlow(nonce: string): Promise<Record<string, any>> {
     }),
   });
   expect(tokenRes.status).toBe(200);
-  return tokenRes.json();
+  return readJson(tokenRes);
 }
 
 describe("OIDC discovery document", () => {
@@ -61,7 +68,7 @@ describe("OIDC discovery document", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const doc = await res.json();
+    const doc = await readJson(res);
     expect(doc.issuer).toBe(ISSUER);
     expect(doc.authorization_endpoint).toBe(`${ISSUER}/api/oauth2/authorize`);
     expect(doc.token_endpoint).toBe(`${ISSUER}/api/oauth2/token`);
@@ -79,7 +86,7 @@ describe("OIDC JWKS", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const { keys } = await res.json();
+    const { keys } = await readJson(res);
     expect(Array.isArray(keys)).toBe(true);
     expect(keys.length).toBeGreaterThanOrEqual(1);
     const [key] = keys;
@@ -126,7 +133,7 @@ describe("OIDC userinfo endpoint", () => {
     });
 
     expect(res.status).toBe(200);
-    const claims = await res.json();
+    const claims = await readJson(res);
     expect(claims.sub).toBe(USER_ID);
     expect(claims.email).toBe("jason@example.com");
     expect(claims.name).toEqual(expect.any(String));
