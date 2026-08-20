@@ -1,9 +1,14 @@
 import { inArray } from "drizzle-orm";
-import type { GrantIdentifier, OAuthScope, OAuthScopeRepository } from "@jmondi/oauth2-server";
+import type {
+  GrantIdentifier,
+  OAuthClient,
+  OAuthScope,
+  OAuthScopeRepository,
+  OAuthUserIdentifier,
+} from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
 import { oauthScopes } from "../../../db/schema.js";
-import { Client } from "../entities/client.js";
 import { Scope } from "../entities/scope.js";
 
 export class ScopeRepository implements OAuthScopeRepository {
@@ -20,8 +25,8 @@ export class ScopeRepository implements OAuthScopeRepository {
   async finalize(
     scopes: OAuthScope[],
     _identifier: GrantIdentifier,
-    _client: Client,
-    _user_id?: string,
+    _client: OAuthClient,
+    _userId?: OAuthUserIdentifier,
   ): Promise<OAuthScope[]> {
     return scopes;
   }
