@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
-import type { OAuthClient, OAuthTokenRepository } from "@jmondi/oauth2-server";
+import type { OAuthClient, OAuthToken, OAuthTokenRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
 import { oauthTokens, oauthTokenScopes } from "../../../db/schema.js";
@@ -13,6 +13,14 @@ import type { User } from "../entities/user.js";
 //   access token  -> 1h  (set by the grant's accessTokenTTL in container.ts)
 //   refresh token -> 30d (issueRefreshToken below)
 //   session cookie -> 30d (signSession in app.tsx / lib/session.ts)
+const REFRESH_TOKEN_TTL = new DateInterval("30d");
+
+// How long a refresh-token family may live, measured from the first token
+// descended from the authorization code. Rotation re-stamps the rolling 30-day
+// window on every refresh, so without this ceiling a single consent refreshed
+// monthly would never expire (RFC 9700).
+const REFRESH_FAMILY_MAX_LIFETIME = new DateInterval("30d");
+
 export class TokenRepository implements OAuthTokenRepository {
   constructor(private readonly db: Database) {}
 
@@ -115,11 +123,11 @@ export class TokenRepository implements OAuthTokenRepository {
       .where(eq(oauthTokens.originatingAuthCodeId, authCodeId));
   }
 
-  async issueRefreshToken(token: Token, _client: OAuthClient): Promise<Token> {
+  async issueRefreshToken(token: OAuthToken, _client: OAuthClient): Promise<OAuthToken> {
     token.refreshToken = generateRandomToken();
     // Refresh tokens outlive the 1h access token so a client can stay logged in
     // for the 30-day session window without re-running the authorize flow.
-    token.refreshTokenExpiresAt = new DateInterval("30d").getEndDate();
+    token.refreshTokenExpiresAt = await this.refreshTokenExpiresAt(token.originatingAuthCodeId);
     await this.db
       .update(oauthTokens)
       .set({
@@ -128,6 +136,24 @@ export class TokenRepository implements OAuthTokenRepository {
       })
       .where(eq(oauthTokens.accessToken, token.accessToken));
     return token;
+  }
+
+  // The rolling window, clamped to the family's absolute ceiling. A token with no
+  // family anchor (no authorization code behind it) gets the rolling window alone.
+  private async refreshTokenExpiresAt(authCodeId?: string): Promise<Date> {
+    const rolling = REFRESH_TOKEN_TTL.getEndDate();
+    if (!authCodeId) return rolling;
+
+    const [oldest] = await this.db
+      .select({ createdAt: oauthTokens.createdAt })
+      .from(oauthTokens)
+      .where(eq(oauthTokens.originatingAuthCodeId, authCodeId))
+      .orderBy(asc(oauthTokens.createdAt))
+      .limit(1);
+    if (!oldest) return rolling;
+
+    const familyDeadline = new Date(oldest.createdAt.getTime() + REFRESH_FAMILY_MAX_LIFETIME.ms);
+    return familyDeadline < rolling ? familyDeadline : rolling;
   }
 
   async persist({ user, client, scopes, ...token }: Token): Promise<void> {
