@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
-import { logger } from "hono/logger";
 import { csrf } from "hono/csrf";
+import { bodyLimit } from "hono/body-limit";
+import { requestId } from "hono/request-id";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
@@ -22,6 +23,7 @@ import { users } from "./db/schema.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
+import { accessLog, logJson } from "./lib/logger.js";
 import { signSession } from "./lib/session.js";
 import { env, isDev } from "./lib/config.js";
 import { Login } from "./views/Login.js";
@@ -42,16 +44,47 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync("a-password-that-is-never-valid", 12
 
 export const app = new Hono<AppEnv>();
 
-app.use(logger());
+app.use(requestId());
+app.use(accessLog);
+app.use(bodyLimit({ maxSize: 64 * 1024 }));
 app.use(currentUser);
 
 // One error boundary for the whole app: the package's handleVanillaError maps
 // OAuthExceptions to their RFC body shape and wraps anything else into a proper
 // OAuth internalServerError, so the pure OAuth routes can just throw. Hono's own
 // HTTPException (e.g. the csrf() 403) carries its own Response — honor it as-is.
-app.onError(err => {
+app.onError((err, c) => {
   if (err instanceof HTTPException) return err.getResponse();
+  // Without this line the only record of a 500 is the deliberately generic body
+  // the client receives. Protocol errors (invalid_grant and friends) are the
+  // caller's mistake rather than an incident, so they stay at debug.
+  const isProtocolError = err instanceof OAuthException;
+  logJson(isProtocolError ? "debug" : "error", err.message, {
+    requestId: c.get("requestId"),
+    method: c.req.method,
+    path: new URL(c.req.url).pathname,
+    stack: isProtocolError ? undefined : err.stack,
+  });
   return responseToVanilla(handleVanillaError(err));
+});
+
+// Liveness: answers as long as the process can serve, and deliberately touches
+// nothing else — a dependency outage must not get the container restarted.
+app.get("/healthz", c => c.text("ok"));
+
+// Readiness: the process is up, but take it out of rotation while it cannot
+// reach the database.
+app.get("/readyz", async c => {
+  try {
+    await db.execute(sql`select 1`);
+    return c.text("ready");
+  } catch (e) {
+    logJson("error", "readiness check failed", {
+      requestId: c.get("requestId"),
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return c.text("not ready", 503);
+  }
 });
 
 app.get("/api/ping", c => c.text("pong"));

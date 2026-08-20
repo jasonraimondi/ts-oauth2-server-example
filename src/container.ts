@@ -15,6 +15,7 @@ import { TokenRepository } from "./app/oauth/repositories/token_repository.js";
 import { MyCustomJwtService } from "./app/oauth/services/custom_jwt_service.js";
 import { resolvePrivateKey } from "./lib/oidc_key.js";
 import { env } from "./lib/config.js";
+import { oauthServerLogger } from "./lib/logger.js";
 
 const clientRepository = new ClientRepository(db);
 const scopeRepository = new ScopeRepository(db);
@@ -34,6 +35,7 @@ const authorizationServer = new AuthorizationServer(
     requiresPKCE: true,
     requiresS256: true,
     issuer,
+    logger: oauthServerLogger,
     oidc: {
       authorizationEndpoint: `${issuer}/api/oauth2/authorize`,
       tokenEndpoint: `${issuer}/api/oauth2/token`,

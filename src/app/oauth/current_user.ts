@@ -8,7 +8,7 @@ import { verifySession } from "../../lib/session.js";
 
 // Shared shape of the Hono context variables, referenced by both the app's
 // `new Hono<AppEnv>()` and this middleware so `c.get/c.set("user")` can't drift.
-export type AppEnv = { Variables: { user?: User } };
+export type AppEnv = { Variables: { user?: User; requestId: string } };
 
 export const currentUser = createMiddleware<AppEnv>(async (c, next) => {
   const jid = getCookie(c, "jid");
