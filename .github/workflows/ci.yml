@@ -38,10 +38,12 @@ jobs:
       - run: pnpm db:migrate
         env:
           DATABASE_URL: postgresql://oauth:secret@localhost:8888/oauth_example
-      - run: pnpm build # tsc --noEmit (type-check)
+      - run: pnpm typecheck
+      - run: pnpm run build
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm test
+      - run: docker build -t oauth-server:ci .
 
   web:
     runs-on: ubuntu-latest
@@ -60,5 +62,6 @@ jobs:
           cache-dependency-path: example-client/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile --ignore-workspace
       - run: pnpm run check
+      - run: pnpm run lint
       - run: pnpm run build
       - run: pnpm run test
