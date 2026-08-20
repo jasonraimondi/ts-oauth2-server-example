@@ -5,7 +5,7 @@
 An example implementation of [@jmondi/oauth2-server](https://github.com/jasonraimondi/ts-oauth2-server) using a [Hono](https://hono.dev) server and a SvelteKit client. It wires the package into a realistic app — a full authorization-code + PKCE flow with **real user consent**, OpenID Connect, token refresh and revocation, and a browser client that consumes it. The goal is a blueprint you can read end to end, not a "hello world".
 
 > [!NOTE]
-> This repo targets **@jmondi/oauth2-server v5** (currently `5.0.0-rc.2`), which is what enables the Fetch `vanilla` adapter and the OIDC endpoints used here. npm `latest` is still v4, so the v5-only APIs in this example are expected.
+> This repo targets **@jmondi/oauth2-server v5** (currently `5.0.0-rc.5`), which is what enables the Fetch `vanilla` adapter and the OIDC endpoints used here. npm `latest` is still v4, so the v5-only APIs in this example are expected.
 
 ## Features
 

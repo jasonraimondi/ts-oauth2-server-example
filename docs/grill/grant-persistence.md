@@ -17,9 +17,10 @@ _Status: in progress · updated as we go_
 - **Scope-change semantics** — coverage is `grant exists && requested ⊆ granted`. On interactive approval the Grant unions: `granted ← granted ∪ requested`. Because union matches incremental authorization as Google/GitHub do it and avoids the prompt churn `replace` causes when a client narrows then re-widens its request. Rejected: replace (a later narrow request would silently shrink the Grant and re-prompt for a scope the user already approved). Accepted consequence: **Grants are monotonic** — without a withdrawal surface, an approval is permanent.
 - **Empty-scope edge** — the Grant must exist before the subset check, because `∅ ⊆ ∅` would otherwise auto-approve a no-scope request on a first-ever visit and mint a code without the Resource Owner ever seeing a screen.
 - **Consent screen on partial overlap** — shows all requested scopes, not just the ones new since the Grant. Because it needs no change to `src/views/Scopes.tsx` and a delta-only list can mislead a reader into thinking the Client ends up holding only the delta.
-- **Issued scopes** — the token always carries the *requested* scopes, never the Grant's full set. Auto-approval must not widen a token to everything the Grant holds.
+- **Issued scopes** — the token always carries the _requested_ scopes, never the Grant's full set. Auto-approval must not widen a token to everything the Grant holds.
 
 ## Open questions
+
 - Re-prompt semantics when the requested scope set changes — superset check against the Grant, and whether approval unions or replaces.
 - Revocation surface — is there any way for a Resource Owner to withdraw a Grant in this pass?
 

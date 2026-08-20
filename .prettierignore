@@ -3,7 +3,7 @@ node_modules
 pnpm-lock.yaml
 .env
 
-# the web client is a separate pnpm project with its own prettier (+ svelte plugin)
-web
+# the example client is a separate pnpm project with its own prettier (+ svelte plugin)
+example-client
 # generated drizzle migrations / snapshots
 drizzle
