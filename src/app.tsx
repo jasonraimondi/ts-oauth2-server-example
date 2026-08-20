@@ -65,7 +65,9 @@ app.use(
       // Framing the consent screen and stealing a click on "Approve" is the
       // classic OAuth clickjacking attack (RFC 6749 §10.13, RFC 9700).
       frameAncestors: ["'none'"],
-      formAction: ["'self'"],
+      // No form-action: Chrome applies it to the redirect that follows a form
+      // POST, so 'self' would block the consent form's 302 to the client's
+      // redirect_uri. Cross-origin form posts are rejected by the csrf middleware.
       // The server-rendered views carry their CSS in an inline <style>.
       styleSrc: ["'unsafe-inline'"],
     },

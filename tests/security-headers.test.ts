@@ -35,12 +35,12 @@ describe("security headers on the browser form routes", () => {
     expect(res.headers.get("x-frame-options")).toBe("DENY");
   });
 
-  it("keeps the authorize query out of the Referer and allows the views' inline style", async () => {
+  it("keeps the authorize query out of the Referer, allows the views' inline style, and leaves the consent redirect unblocked", async () => {
     const res = await app.request(`/api/login?${authorizeQuery()}`);
 
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     const csp = res.headers.get("content-security-policy")!;
-    expect(csp).toContain("form-action 'self'");
+    expect(csp).not.toContain("form-action");
     expect(csp).toContain("style-src 'unsafe-inline'");
   });
 
