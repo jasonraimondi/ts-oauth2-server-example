@@ -5,7 +5,7 @@ import type { MiddlewareHandler } from "hono";
 import type { User } from "./entities/user.js";
 import type { UserRepository } from "./repositories/user_repository.js";
 import { NotFoundError } from "./repositories/user_repository.js";
-import { verifySession } from "../../lib/session.js";
+import { SESSION_COOKIE_NAME, sessionCookiePrefix, verifySession } from "../../lib/session.js";
 
 // Shared shape of the Hono context variables, referenced by both the app's
 // `new Hono<AppEnv>()` and this middleware so `c.get/c.set("user")` can't drift.
@@ -21,7 +21,7 @@ export type AppEnv = { Variables: { user?: User; requestId: string } };
  */
 export function currentUser(userRepository: UserRepository): MiddlewareHandler<AppEnv> {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const jid = getCookie(c, "jid");
+    const jid = getCookie(c, SESSION_COOKIE_NAME, sessionCookiePrefix());
     if (!jid) return next();
 
     // verifySession checks the session-only HS256 secret AND asserts typ:"session",

@@ -1,6 +1,20 @@
 import { sign, verify } from "hono/jwt";
+import type { CookiePrefixOptions } from "hono/utils/cookie";
 
 import { isDev } from "./config.js";
+
+/** Base name of the browser session cookie, before any prefix. */
+export const SESSION_COOKIE_NAME = "jid";
+
+/**
+ * The `__Host-` prefix a browser enforces on the session cookie: it pins the
+ * cookie to this exact origin with Secure and Path=/ and no Domain, so no
+ * sibling subdomain can overwrite the session. The prefix requires Secure, which
+ * browsers refuse over http://localhost, so local development keeps the bare name.
+ */
+export function sessionCookiePrefix(): CookiePrefixOptions | undefined {
+  return isDev() ? undefined : "host";
+}
 
 /**
  * The browser session cookie ("jid") lives in a DIFFERENT trust domain than the

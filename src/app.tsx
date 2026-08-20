@@ -34,7 +34,7 @@ import { rateLimit } from "./lib/rate_limit.js";
 import { requireScope } from "./lib/require_scope.js";
 import { clientIp } from "./lib/client_ip.js";
 import { accessLog, logJson } from "./lib/logger.js";
-import { signSession } from "./lib/session.js";
+import { signSession, SESSION_COOKIE_NAME, sessionCookiePrefix } from "./lib/session.js";
 import { env, isDev } from "./lib/config.js";
 import { Login } from "./views/Login.js";
 import { Scopes } from "./views/Scopes.js";
@@ -217,13 +217,19 @@ app.post(
     await recordLogin(c, row.id);
 
     const token = await signSession(row.id, SESSION_TTL_SECONDS, row.tokenVersion);
-    setCookie(c, "jid", token, {
+    setCookie(c, SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       // Dropped only for local development: browsers refuse Secure cookies over
       // http://localhost, which would silently break the demo login.
       secure: !isDev(),
-      sameSite: "Strict",
+      path: "/",
+      // Lax, not Strict: the authorize request reaches us as a top-level
+      // navigation from the client's own site, where a Strict cookie is withheld —
+      // every authorize would look logged out once the client and this server sit
+      // on different registrable domains. Lax still blocks cross-site POSTs.
+      sameSite: "Lax",
       maxAge: SESSION_TTL_SECONDS,
+      prefix: sessionCookiePrefix(),
     });
 
     return c.redirect("/api/oauth2/authorize" + queryString(c), 302);
@@ -260,9 +266,13 @@ app.post("/api/logout", async c => {
       .set({ tokenVersion: sql`token_version + 1` })
       .where(eq(users.id, user.id));
   }
-  // Mirror the path/secure attributes used at set time so the clearing cookie
-  // matches the original scope and the browser actually drops it.
-  deleteCookie(c, "jid", { path: "/", secure: !isDev() });
+  // Mirror the path/secure/prefix attributes used at set time so the clearing
+  // cookie matches the original scope and the browser actually drops it.
+  deleteCookie(c, SESSION_COOKIE_NAME, {
+    path: "/",
+    secure: !isDev(),
+    prefix: sessionCookiePrefix(),
+  });
   return c.text("Logged out");
 });
 
