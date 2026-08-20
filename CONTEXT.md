@@ -69,3 +69,8 @@ _Avoid_: "consent record", "approval", and OAuth's "grant type" (`authorization_
 
 - "client" was used for the browser, the SvelteKit app, and a DB `oauthClients` row — resolved: the **Client/BFF** is the SvelteKit server; the browser is the **browser**; a registered record is an "`oauthClients` row".
 - "session" meant both the `jid` AS login and the user's app session — resolved into distinct **AS Session** (`jid`) and **BFF Session** (`sid`).
+
+## See also
+
+- [docs/adr](docs/adr) — the decisions that shaped this vocabulary, starting with [ADR-0001](docs/adr/0001-backend-for-frontend.md).
+- [docs/history](docs/history) — design history: the plans and grill notes behind those decisions. Kept for the record, not current documentation.
