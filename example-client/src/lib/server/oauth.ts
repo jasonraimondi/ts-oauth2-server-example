@@ -80,7 +80,32 @@ async function postToken(
     const detail = await res.text().catch(() => "");
     throw new Error(`token endpoint responded ${res.status}: ${detail}`);
   }
-  return (await res.json()) as TokenResponse;
+  return parseTokenResponse(await res.json());
+}
+
+/**
+ * The token response crosses a trust boundary: whatever the AS sends lands in an
+ * `Authorization: Bearer` header and in the session store. A cast would let a
+ * missing or non-string `access_token` travel as the literal "undefined" instead
+ * of failing here, so each field is checked and anything unrecognized dropped.
+ */
+function parseTokenResponse(body: unknown): TokenResponse {
+  const claims = body as Record<string, unknown> | null;
+  if (typeof claims?.access_token !== "string" || claims.access_token === "") {
+    throw new Error("token endpoint returned no access_token");
+  }
+  if (typeof claims.token_type !== "string") {
+    throw new Error("token endpoint returned no token_type");
+  }
+  const optionalString = (value: unknown) => (typeof value === "string" ? value : undefined);
+  return {
+    access_token: claims.access_token,
+    token_type: claims.token_type,
+    refresh_token: optionalString(claims.refresh_token),
+    id_token: optionalString(claims.id_token),
+    expires_in: typeof claims.expires_in === "number" ? claims.expires_in : undefined,
+    scope: optionalString(claims.scope),
+  };
 }
 
 export function exchangeCode(opts: {
@@ -127,7 +152,11 @@ export async function fetchUserInfo(opts: {
     headers: { authorization: `Bearer ${opts.accessToken}`, accept: "application/json" },
   });
   if (!res.ok) throw new Error(`userinfo endpoint responded ${res.status}`);
-  return (await res.json()) as Record<string, unknown>;
+  const claims: unknown = await res.json();
+  if (typeof claims !== "object" || claims === null || Array.isArray(claims)) {
+    throw new Error("userinfo endpoint returned a non-object body");
+  }
+  return claims as Record<string, unknown>;
 }
 
 /**
