@@ -18,11 +18,33 @@ export type Session = {
   user: { sub: string; email?: string };
 };
 
+/**
+ * The seam a real deployment swaps. Sessions hold refresh tokens and must outlive
+ * a single process and be visible to every replica, so anything beyond this demo
+ * hands `setSessionStore` a Redis-backed (or similar) implementation.
+ */
+export interface SessionStore<T> {
+  set(key: string, value: T, ttlMs?: number): void;
+  get(key: string): T | undefined;
+  take(key: string): T | undefined;
+  delete(key: string): void;
+}
+
 export const SESSION_COOKIE = "sid";
+
+// The single lifetime of a logged-in session: the store entry and the `sid`
+// cookie's Max-Age both come from here, so the browser and the server can never
+// disagree about when a session is over.
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
-const pending = new MemoryStore<PendingAuth>();
-const sessions = new MemoryStore<Session>();
+const pending: SessionStore<PendingAuth> = new MemoryStore<PendingAuth>();
+let sessions: SessionStore<Session> = new MemoryStore<Session>();
+
+export function setSessionStore(store: SessionStore<Session>): void {
+  sessions = store;
+}
 
 export function putPending(state: string, value: PendingAuth): void {
   pending.set(state, value, PENDING_TTL_MS);
@@ -34,7 +56,7 @@ export function takePending(state: string): PendingAuth | undefined {
 
 export function createSession(value: Session): string {
   const sid = randomToken(32);
-  sessions.set(sid, value);
+  sessions.set(sid, value, SESSION_TTL_MS);
   return sid;
 }
 
@@ -43,7 +65,7 @@ export function getSession(sid: string): Session | undefined {
 }
 
 export function updateSession(sid: string, value: Session): void {
-  sessions.set(sid, value);
+  sessions.set(sid, value, SESSION_TTL_MS);
 }
 
 export function destroySession(sid: string): void {

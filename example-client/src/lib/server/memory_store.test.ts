@@ -53,4 +53,31 @@ describe("MemoryStore", () => {
       vi.useRealTimers();
     }
   });
+
+  it("sweeps expired entries on a later write, not only on read", () => {
+    vi.useFakeTimers();
+    try {
+      const store = new MemoryStore<number>();
+      store.set("a", 1, 1000);
+      vi.advanceTimersByTime(61 * 1000);
+      store.set("b", 2);
+      expect(store.size).toBe(1);
+      expect(store.get("a")).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not sweep on every write", () => {
+    vi.useFakeTimers();
+    try {
+      const store = new MemoryStore<number>();
+      store.set("a", 1, 1000);
+      vi.advanceTimersByTime(1001);
+      store.set("b", 2);
+      expect(store.size).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

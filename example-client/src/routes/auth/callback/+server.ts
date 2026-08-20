@@ -3,9 +3,7 @@ import { error, redirect, type RequestHandler } from "@sveltejs/kit";
 
 import { config, discover } from "$lib/server/config";
 import { exchangeCode, fetchUserInfo, validateIdToken } from "$lib/server/oauth";
-import { SESSION_COOKIE, createSession, takePending } from "$lib/server/session";
-
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+import { SESSION_COOKIE, SESSION_TTL_MS, createSession, takePending } from "$lib/server/session";
 
 // Handle the AS redirect: validate state, exchange the code (confidential client,
 // server-to-server), validate the id_token (iss/aud/exp/nonce, RS256), then mint a
@@ -66,7 +64,7 @@ export const GET: RequestHandler = async ({ fetch, url, cookies }) => {
     httpOnly: true,
     secure: !dev, // browsers drop Secure cookies over http://localhost
     sameSite: "strict",
-    maxAge: SESSION_TTL_SECONDS,
+    maxAge: SESSION_TTL_MS / 1000,
   });
 
   redirect(302, pending.returnTo);
