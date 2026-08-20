@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:seed": "tsx src/db/seed.ts",
+    "db:prune": "tsx src/db/prune.ts",
     "db:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -37,8 +38,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^25.9.2",
     "@vitest/coverage-v8": "^4.1.8",
     "drizzle-kit": "^0.31.10",
