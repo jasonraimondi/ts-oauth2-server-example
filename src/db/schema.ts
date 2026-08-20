@@ -53,6 +53,8 @@ export const oauthScopes = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     name: text().notNull(),
+    // Shown on the consent screen in place of the raw scope name.
+    description: text(),
     createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
     updatedAt: timestamp(),
   },

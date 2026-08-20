@@ -1,5 +1,7 @@
 import { pathToFileURL } from "node:url";
 
+import { sql } from "drizzle-orm";
+
 import { closeDb, db } from "./index.js";
 import { oauthClients, oauthClientScopes, oauthScopes, users } from "./schema.js";
 import { setPassword } from "../lib/password.js";
@@ -74,13 +76,16 @@ export async function seed(database: typeof db = db): Promise<void> {
   await database
     .insert(oauthScopes)
     .values([
-      { id: SCOPE_READ_ID, name: "contacts.read" },
-      { id: SCOPE_WRITE_ID, name: "contacts.write" },
-      { id: SCOPE_OPENID_ID, name: "openid" },
-      { id: SCOPE_EMAIL_ID, name: "email" },
-      { id: SCOPE_PROFILE_ID, name: "profile" },
+      { id: SCOPE_READ_ID, name: "contacts.read", description: "Read your contacts" },
+      { id: SCOPE_WRITE_ID, name: "contacts.write", description: "Add and change your contacts" },
+      { id: SCOPE_OPENID_ID, name: "openid", description: "Confirm who you are" },
+      { id: SCOPE_EMAIL_ID, name: "email", description: "See your email address" },
+      { id: SCOPE_PROFILE_ID, name: "profile", description: "See your name" },
     ])
-    .onConflictDoNothing({ target: oauthScopes.id });
+    .onConflictDoUpdate({
+      target: oauthScopes.id,
+      set: { description: sql`excluded.description` },
+    });
 
   await database
     .insert(oauthClientScopes)
