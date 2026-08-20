@@ -8,6 +8,10 @@
 
     /* Strictness */
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
 
@@ -21,9 +25,9 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
 
-    /* This project runs from source via tsx (dev) and is never emitted to
-       dist, so `tsc` (pnpm build) is used purely as a type-checker. */
+    /* This config type-checks everything and emits nothing;
+       tsconfig.build.json is the one that emits src/ to dist/. */
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "*.config.ts"]
 }

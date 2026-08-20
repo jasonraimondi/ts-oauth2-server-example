@@ -18,5 +18,9 @@ export default defineConfig({
     pool: "forks",
     maxWorkers: 1,
     isolate: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+    },
   },
 });

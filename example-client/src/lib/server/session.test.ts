@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { coalesceRefresh, type Session } from "./session";
+import { MemoryStore } from "./memory_store";
+import {
+  SESSION_TTL_MS,
+  coalesceRefresh,
+  createSession,
+  getSession,
+  setSessionStore,
+  type Session,
+  type SessionStore,
+} from "./session";
 
 function session(accessToken: string): Session {
   return { accessToken, accessTokenExpiresAt: 0, user: { sub: "u1" } };
@@ -74,5 +83,44 @@ describe("coalesceRefresh", () => {
 
     await expect(coalesceRefresh("s4", failing)).rejects.toThrow("boom");
     expect(calls).toBe(2);
+  });
+});
+
+describe("session lifetime", () => {
+  it("expires a session once SESSION_TTL_MS has elapsed", () => {
+    vi.useFakeTimers();
+    try {
+      const sid = createSession(session("AT"));
+      expect(getSession(sid)).toEqual(session("AT"));
+      vi.advanceTimersByTime(SESSION_TTL_MS + 1);
+      expect(getSession(sid)).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("setSessionStore", () => {
+  it("routes reads and writes through the injected store", () => {
+    const writes: Array<{ key: string; ttlMs?: number }> = [];
+    const entries = new Map<string, Session>();
+    const store: SessionStore<Session> = {
+      set: (key, value, ttlMs) => {
+        writes.push({ key, ttlMs });
+        entries.set(key, value);
+      },
+      get: key => entries.get(key),
+      take: key => entries.get(key),
+      delete: key => void entries.delete(key),
+    };
+
+    setSessionStore(store);
+    try {
+      const sid = createSession(session("AT"));
+      expect(getSession(sid)).toEqual(session("AT"));
+      expect(writes).toEqual([{ key: sid, ttlMs: SESSION_TTL_MS }]);
+    } finally {
+      setSessionStore(new MemoryStore<Session>());
+    }
   });
 });

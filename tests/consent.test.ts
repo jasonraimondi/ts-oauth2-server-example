@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { jwt, db } from "../src/container.js";
 import { oauthTokens } from "../src/db/schema.js";
-import { approveAuthorize, codeFromApprove, formHeaders, mintJid, pkce } from "./helpers.js";
+import {
+  approveAuthorize,
+  codeFromApprove,
+  formHeaders,
+  mintJid,
+  pkce,
+  readJson,
+} from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb"; // Sample Client (public)
 const OIDC_CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d"; // OIDC Demo Client (public)
@@ -65,6 +72,30 @@ describe("consent screen (GET /api/scopes)", () => {
     expect(body).toContain('value="yes"'); // approve button
     expect(body).toContain('value="no"'); // deny button
   });
+
+  it("names the signed-in user so consent shows who is granting access", async () => {
+    const { challenge } = pkce();
+    const jid = await mintJid();
+
+    const res = await app.request(`/api/scopes?${authorizeQuery(challenge)}`, {
+      headers: { Cookie: `jid=${jid}` },
+    });
+
+    expect(await res.text()).toContain("jason@example.com");
+  });
+
+  it("redirects an anonymous visitor to login instead of rendering the form", async () => {
+    // Rendering consent to a stranger enumerates clients and scopes, and nobody
+    // is there who could answer the form anyway.
+    const { challenge } = pkce();
+
+    const res = await app.request(`/api/scopes?${authorizeQuery(challenge)}`, {
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")!.startsWith("/api/login?")).toBe(true);
+  });
 });
 
 describe("consent decision (POST /api/scopes)", () => {
@@ -82,7 +113,7 @@ describe("consent decision (POST /api/scopes)", () => {
 
     const tokenRes = await exchangeCode(code, verifier);
     expect(tokenRes.status).toBe(200);
-    const json = await tokenRes.json();
+    const json = await readJson(tokenRes);
     expect(json.access_token).toEqual(expect.any(String));
     expect(json.token_type).toBe("Bearer");
   });
@@ -139,7 +170,7 @@ describe("access-token revocation guards /userinfo (proves getByAccessToken + is
     const code = await codeFromApprove(query, jid);
     const tokenRes = await exchangeCode(code, verifier, OIDC_CLIENT_ID);
     expect(tokenRes.status).toBe(200);
-    const { access_token } = await tokenRes.json();
+    const { access_token } = await readJson(tokenRes);
 
     // Before revocation the token is accepted.
     const before = await app.request("/api/oauth2/userinfo", {

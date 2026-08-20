@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { approveAuthorize, mintJid, pkce } from "./helpers.js";
+import { approveAuthorize, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -31,10 +31,10 @@ async function initialTokens(): Promise<{ refresh_token: string }> {
       code_verifier: verifier,
     }),
   });
-  return tokenRes.json();
+  return readJson(tokenRes);
 }
 
-function refresh(refreshToken: string): Promise<Response> {
+async function refresh(refreshToken: string): Promise<Response> {
   return app.request("/api/oauth2/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -50,7 +50,7 @@ describe("refresh-token reuse detection revokes the family", () => {
   it("kills the active refresh token when a rotated one is reused", async () => {
     const first = await initialTokens(); // RT1
 
-    const rotated = await (await refresh(first.refresh_token)).json(); // RT1 -> RT2, RT1 revoked
+    const rotated = await readJson(await refresh(first.refresh_token)); // RT1 -> RT2, RT1 revoked
     expect(rotated.refresh_token).toEqual(expect.any(String));
     expect(rotated.refresh_token).not.toBe(first.refresh_token);
 
@@ -68,12 +68,12 @@ describe("refresh-token reuse detection revokes the family", () => {
 
   it("allows normal rotation (no reuse) to keep chaining", async () => {
     const first = await initialTokens();
-    const rotated = await (await refresh(first.refresh_token)).json();
+    const rotated = await readJson(await refresh(first.refresh_token));
 
     // No reuse occurred, so RT2 rotates to RT3 normally.
     const again = await refresh(rotated.refresh_token);
     expect(again.status).toBe(200);
-    const json = await again.json();
+    const json = await readJson(again);
     expect(json.refresh_token).toEqual(expect.any(String));
     expect(json.refresh_token).not.toBe(rotated.refresh_token);
   });
@@ -87,7 +87,7 @@ describe("auth-code replay revokes the issued token family (RFC 9700)", () => {
     const res = await approveAuthorize(authorizeQuery(challenge, "replay-fam"), await mintJid());
     const code = new URL(res.headers.get("location")!).searchParams.get("code")!;
 
-    const exchange = (): Promise<Response> =>
+    const exchange = async (): Promise<Response> =>
       app.request("/api/oauth2/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -102,7 +102,7 @@ describe("auth-code replay revokes the issued token family (RFC 9700)", () => {
 
     const first = await exchange();
     expect(first.status).toBe(200);
-    const { access_token } = await first.json();
+    const { access_token } = await readJson(first);
 
     // The token works before any replay.
     const before = await app.request("/api/contacts", {

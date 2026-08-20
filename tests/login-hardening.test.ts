@@ -1,5 +1,3 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
@@ -7,7 +5,7 @@ import { app } from "../src/app.js";
 import { db } from "../src/container.js";
 import { oauthClients, oauthClientScopes, users } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
-import { formHeaders, mintJid, pkce } from "./helpers.js";
+import { formHeaders, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -21,14 +19,11 @@ function authorizeQuery(challenge: string, clientId = CLIENT_ID): string {
   );
 }
 
-describe("login handler hardening (ITEM E)", () => {
-  // app.request uses http://localhost; mirror it so hono/csrf passes.
-  function loginQuery(): string {
-    const verifier = randomBytes(32).toString("base64url");
-    const challenge = createHash("sha256").update(verifier).digest("base64url");
-    return authorizeQuery(challenge);
-  }
+function loginQuery(): string {
+  return authorizeQuery(pkce().challenge);
+}
 
+describe("login handler hardening (ITEM E)", () => {
   it("returns a generic 401 for an unknown email (no user-enumeration signal)", async () => {
     const res = await app.request(`/api/login?${loginQuery()}`, {
       method: "POST",
@@ -37,7 +32,11 @@ describe("login handler hardening (ITEM E)", () => {
     });
 
     expect(res.status).toBe(401);
-    expect(await res.text()).toBe("Unauthorized");
+    // The login form comes back with the typed email and one generic message, so
+    // the page reveals nothing an attacker could use to enumerate addresses.
+    const body = await res.text();
+    expect(body).toContain("Email or password is incorrect.");
+    expect(body).toContain('value="nobody@example.com"');
   });
 
   it("returns the same generic 401 for a user whose passwordHash is null", async () => {
@@ -60,10 +59,39 @@ describe("login handler hardening (ITEM E)", () => {
       });
 
       expect(res.status).toBe(401);
-      expect(await res.text()).toBe("Unauthorized");
+      expect(await res.text()).toContain("Email or password is incorrect.");
     } finally {
       await db.delete(users).where(eq(users.id, nullHashUser.id));
     }
+  });
+});
+
+describe("login form validation", () => {
+  it("re-renders the form on a malformed body instead of answering raw JSON", async () => {
+    const res = await app.request(`/api/login?${loginQuery()}`, {
+      method: "POST",
+      headers: formHeaders,
+      body: "email=not-an-email&password=",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(await res.text()).toContain("<form");
+  });
+});
+
+describe("login audit trail", () => {
+  it("logs in despite an X-Forwarded-For that is not an address", async () => {
+    // The header used to be written straight into an inet column, so a garbage
+    // value passed password verification and then 500'd on the Postgres parse.
+    const res = await app.request(`/api/login?${loginQuery()}`, {
+      method: "POST",
+      headers: { ...formHeaders, "x-forwarded-for": "not-an-ip" },
+      body: "email=jason@example.com&password=password123",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")!.startsWith("/api/oauth2/authorize?")).toBe(true);
   });
 });
 
@@ -120,7 +148,7 @@ describe("confidential client positive flow (ITEM F)", () => {
       });
 
       expect(tokenRes.status).toBe(200);
-      const json = await tokenRes.json();
+      const json = await readJson(tokenRes);
       expect(json.access_token).toEqual(expect.any(String));
       expect(json.token_type).toBe("Bearer");
       expect(json.scope).toContain("contacts.read");

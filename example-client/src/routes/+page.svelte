@@ -1,75 +1,104 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { enhance } from "$app/forms";
+  import { invalidateAll } from "$app/navigation";
+  import type { SubmitFunction } from "@sveltejs/kit";
 
-  type Me = { authenticated: boolean; user?: { sub: string; email?: string } };
+  import type { PageProps } from "./$types";
+
   type Contact = { name: string; email: string };
 
-  let me = $state<Me | null>(null);
+  let { data }: PageProps = $props();
+
   let contacts = $state<Contact[] | null>(null);
   let error = $state<string | null>(null);
-  let meError = $state<string | null>(null);
+  let loading = $state(false);
 
-  async function loadMe() {
-    meError = null;
-    try {
-      const res = await fetch("/api/me");
-      if (!res.ok) {
-        meError = `Couldn't check sign-in status (HTTP ${res.status}).`;
-        return;
-      }
-      me = await res.json();
-    } catch {
-      // Network failure / unreachable server — surface it instead of leaving
-      // the UI stuck on "Loading…" forever.
-      meError = "Couldn't reach the server. Check your connection and try again.";
-    }
+  const NETWORK_ERROR = "Couldn't reach the server. Check your connection and try again.";
+
+  const AUTH_ERRORS: Record<string, string> = {
+    access_denied: "You declined the request, so nothing was shared.",
+    expired_state: "That sign-in attempt expired before it finished. Please try again.",
+  };
+
+  let authError = $derived(
+    data.authError === null
+      ? null
+      : (AUTH_ERRORS[data.authError] ?? "Sign-in did not complete. Please try again."),
+  );
+
+  function isContactList(value: unknown): value is Contact[] {
+    return (
+      Array.isArray(value) &&
+      value.every((item: unknown) => {
+        const contact = item as Contact | null;
+        return typeof contact?.name === "string" && typeof contact.email === "string";
+      })
+    );
   }
 
   async function loadContacts() {
+    loading = true;
     error = null;
     contacts = null;
-    const res = await fetch("/api/contacts");
-    if (!res.ok) {
-      // A 401 means the BFF tore down the session (e.g. the refresh token expired);
-      // re-sync auth state so the UI drops back to the logged-out view.
+    try {
+      const res = await fetch("/api/contacts");
       if (res.status === 401) {
-        await loadMe();
+        // The BFF tore the session down; re-run load so the page falls back to
+        // the logged-out view instead of leaving a dead button behind.
+        error = "Your session has ended. Please log in again.";
+        await invalidateAll();
         return;
       }
-      error = `Failed to load contacts (HTTP ${res.status}).`;
-      return;
+      if (!res.ok) {
+        error = `Couldn't load contacts (HTTP ${res.status}).`;
+        return;
+      }
+      const body: unknown = await res.json();
+      if (!isContactList(body)) {
+        error = "The server returned contacts in an unexpected shape.";
+        return;
+      }
+      contacts = body;
+    } catch {
+      error = NETWORK_ERROR;
+    } finally {
+      loading = false;
     }
-    contacts = await res.json();
   }
 
-  async function logout() {
-    await fetch("/auth/logout", { method: "POST" });
-    contacts = null;
-    await loadMe();
-  }
-
-  onMount(loadMe);
+  const logout: SubmitFunction = () => {
+    loading = true;
+    error = null;
+    return async ({ result, update }) => {
+      loading = false;
+      if (result.type === "error") {
+        error = NETWORK_ERROR;
+        return;
+      }
+      contacts = null;
+      await update();
+    };
+  };
 </script>
 
 <h1>Backend-for-Frontend OAuth2 demo</h1>
 
-{#if me === null}
-  {#if meError}
-    <p>{meError}</p>
-    <button onclick={loadMe}>Retry</button>
-  {:else}
-    <p>Loading…</p>
-  {/if}
-{:else if !me.authenticated}
-  <p>Not logged in. The OAuth tokens are held by the server — never the browser.</p>
-  <!-- Full-page navigation: the BFF starts the OAuth redirect dance. -->
-  <a href="/auth/login">Log in</a>
-{:else}
-  <p>Signed in as <strong>{me.user?.email ?? me.user?.sub}</strong>.</p>
-  <button onclick={loadContacts}>Load contacts</button>
-  <button onclick={logout}>Log out</button>
+{#if authError}
+  <p role="status">{authError}</p>
+{/if}
 
-  {#if error}<p>{error}</p>{/if}
+{#if error}
+  <p role="alert">{error}</p>
+{/if}
+
+{#if data.user}
+  <p>Signed in as <strong>{data.user.email ?? data.user.sub}</strong>.</p>
+
+  <button onclick={loadContacts} disabled={loading}>Load contacts</button>
+
+  <form method="POST" action="?/logout" use:enhance={logout}>
+    <button type="submit" disabled={loading}>Log out</button>
+  </form>
 
   {#if contacts}
     <ul>
@@ -78,4 +107,8 @@
       {/each}
     </ul>
   {/if}
+{:else}
+  <p>Not logged in. The OAuth tokens are held by the server — never the browser.</p>
+  <!-- Full-page navigation: the BFF starts the OAuth redirect dance. -->
+  <a href="/auth/login">Log in</a>
 {/if}

@@ -1,78 +1,116 @@
-# OAuth2 / OIDC example client
+# OAuth2 / OIDC example client (Backend-for-Frontend)
 
-A small SvelteKit single-page app that demonstrates how a **public** browser
-client consumes the OAuth2 / OpenID Connect server in this repository
-(built on [`@jmondi/oauth2-server`](https://github.com/jasonraimondi/ts-oauth2-server)).
+A SvelteKit app that is the **Backend-for-Frontend (BFF)** for the authorization server in this repository (built on [`@jmondi/oauth2-server`](https://github.com/jasonraimondi/ts-oauth2-server)).
 
-It walks through the full Authorization Code flow with PKCE:
+The SvelteKit server _is_ the OAuth **Client**. It is a **confidential client**: it authenticates to the Authorization Server (AS) with a `client_secret` and PKCE, it runs the Authorization Code flow server-to-server, and it keeps the access, refresh, and id tokens server-side. The browser receives only an opaque `sid` cookie. The browser never sees a token and never calls the AS.
 
-- **`/login`** — generates a PKCE `code_verifier`/`code_challenge` (S256) and a
-  random `state`, stashes them in `sessionStorage`, and redirects the browser to
-  the server's `/api/oauth2/authorize` endpoint requesting the
-  `contacts.read contacts.write` scopes.
-- **`/callback`** — handles the redirect back: surfaces any `error` from the
-  server, verifies `state`, then exchanges the `code` (plus the stored
-  `code_verifier`) for tokens at `/api/oauth2/token`. No client secret is sent —
-  this is a public PKCE client.
-- **`/refresh`** — exchanges the stored refresh token for a fresh access token.
-- **`/`** — shows the current tokens.
+Read [ADR-0001](../docs/adr/0001-backend-for-frontend.md) for the decision and its consequences. Read [CONTEXT.md](../CONTEXT.md) for the vocabulary — AS Session vs BFF Session, Consent vs Grant.
 
-## Token storage — DEMO ONLY
+## How a login works
 
-> [!WARNING]
-> This client stores the **refresh token in a script-readable cookie** purely so
-> the flow is easy to inspect while learning. That is a teaching shortcut, not a
-> recommendation: any XSS bug could read it and take over the account. A real
-> browser app should not hold the refresh token at all — use a
-> Backend-for-Frontend (BFF) that keeps it server-side behind a `Secure`,
-> `HttpOnly` cookie. As a partial mitigation, this demo keeps the short-lived
-> **access token in memory only** (see `src/lib/browser_storage.ts`).
+1. The browser requests `GET /auth/login`. The BFF generates a CSPRNG `state`, a `nonce`, and a PKCE verifier and S256 challenge. It stores them server-side, keyed by `state`, then redirects the browser to the AS.
+2. The Resource Owner signs in at the AS and approves the consent screen.
+3. The AS redirects the browser back to `GET /auth/callback`. The BFF consumes the pending record for that `state`. A missing record is a failed CSRF check.
+4. The BFF exchanges the code for tokens, server-to-server, with the client secret and the PKCE verifier.
+5. The BFF validates the `id_token`: `iss`, `aud`, `exp`, `nonce`, and an RS256 algorithm pin. [`jose`](https://github.com/panva/jose) does the crypto and resolves the JWKS.
+6. The BFF creates a **BFF Session**, holds the tokens in it, and sets the `sid` cookie.
 
-## Seeded client
+Every AS endpoint comes from OIDC **discovery**. No endpoint is hardcoded. The `issuer` in the discovery document must byte-match the configured `OIDC_ISSUER`.
 
-The dev server seeds a public client you can use immediately:
+## Routes
 
-| Field          | Value                                  |
-| -------------- | -------------------------------------- |
-| `client_id`    | `0e2ec2df-ee53-4327-a472-9d78c278bdbb` |
-| `redirect_uri` | `http://localhost:5173/callback`       |
-| `scopes`       | `contacts.read contacts.write`         |
-| auth method    | none (public, PKCE + S256 required)    |
+| Route                | Kind          | Purpose                                                                                |
+| -------------------- | ------------- | -------------------------------------------------------------------------------------- |
+| `GET /`              | page + `load` | The home page. `+page.server.ts` returns the signed-in user. Rendered on the server.   |
+| `POST /?/logout`     | form action   | Revokes the refresh token at the AS (best effort), destroys the session, clears `sid`. |
+| `GET /auth/login`    | endpoint      | Starts the Authorization Code + PKCE flow.                                             |
+| `GET /auth/callback` | endpoint      | Exchanges the code, validates the `id_token`, creates the BFF Session.                 |
+| `GET /api/contacts`  | endpoint      | Proxies the protected resource with the Bearer token, and refreshes it first if stale. |
 
-These values live in `src/lib/auth.ts`.
+`src/hooks.server.ts` reads the `sid` cookie on every request, resolves it to `event.locals.session`, and clears the cookie when the session is gone. The identity therefore reaches the page through `load`, not through a browser fetch. There is no `/api/me` endpoint and no `onMount` identity call.
+
+Denied consent is a normal outcome, not an error. The callback redirects to `/?auth_error=access_denied`, and the home page shows a status banner. An expired login state gives `/?auth_error=expired_state`. `+error.svelte` covers the genuinely exceptional cases.
+
+## Session and cookie
+
+The `sid` cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` outside development. It holds an opaque identifier only.
+
+`SameSite=Lax` is deliberate. `Strict` can drop the cookie on the landing navigation after a cross-site callback. `Lax` still blocks cross-site POSTs, and SvelteKit's origin check covers the logout form action.
+
+The tokens live in the session record on the server. The BFF refreshes an expired access token before it proxies a request. Concurrent requests share one refresh through a per-session single-flight guard. Without that guard the second request replays an already-rotated refresh token, the AS reads it as theft under RFC 9700, and the whole token family is revoked.
+
+## Swapping the session store
+
+`src/lib/server/session.ts` defines a `SessionStore<T>` interface. `MemoryStore` implements it. `setSessionStore()` injects a different implementation.
+
+The default store is a per-process in-memory map. Sessions are lost on restart and do not span instances. For more than one instance, implement `SessionStore<T>` against Redis or another shared store, and inject it at startup. A shared store also needs a shared refresh lock, because the single-flight guard is per-process.
+
+This repository ships no Redis implementation on purpose. The interface is the seam. The implementation is yours.
+
+## Environment
+
+The server-side variables are read through `$env/dynamic/private`. They never reach the browser. The dev defaults in `src/lib/server/config.ts` match the seeded **BFF Web Client**, so the demo runs with no `.env` file.
+
+| Variable              | Default                                | Purpose                                                                      |
+| --------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `OIDC_ISSUER`         | `http://localhost:3000`                | The AS issuer. Must byte-match the discovery document.                       |
+| `OAUTH_CLIENT_ID`     | `b1ff0000-0000-4000-8000-000000000001` | The seeded confidential client.                                              |
+| `OAUTH_CLIENT_SECRET` | `bff-dev-secret-change-me`             | The plaintext secret. The AS stores only its bcrypt hash.                    |
+| `OAUTH_REDIRECT_URI`  | `http://localhost:5173/auth/callback`  | Must match the seeded redirect URI exactly.                                  |
+| `ORIGIN`              | _(unset)_                              | adapter-node only. The public origin, for example `https://app.example.com`. |
+| `PORT`                | `3000`                                 | adapter-node only. The port the built server listens on.                     |
+
+`OAUTH_CLIENT_SECRET` is published in this repository as a demo value. The BFF refuses to run with that literal secret outside development. Set a real secret before you deploy.
+
+Set `ORIGIN` when a TLS-terminating proxy sits in front of the BFF. Without it, adapter-node derives the origin from the `Host` header, and SvelteKit's origin CSRF check rejects the logout form action.
 
 ## Running it
 
-This `web/` directory is its own standalone pnpm project (independent of the
-repo root), so install it on its own:
+This directory is a standalone pnpm project, independent of the repository root.
 
 ```bash
-# from web/
 pnpm install --ignore-workspace
 ```
 
-Start the OAuth2 server first (it listens on `http://localhost:3000`; see the
-repository root README), then start this client:
+Start the AS first on `http://localhost:3000`. See the [root README](../README.md). Then start this app:
 
 ```bash
 pnpm dev
 ```
 
-The dev server runs on `http://localhost:5173` and proxies `/api/*` through to
-the OAuth2 server on port 3000, so the redirect URIs and seeded client above
-work out of the box. Open <http://localhost:5173/login> to start the flow.
+Open <http://localhost:5173> and click **Log in**. Sign in as `jason@example.com` / `password123` and approve the consent screen. These are seeded demo credentials, published on purpose.
+
+## Deploying
+
+`pnpm build` produces a Node server in `build/`. Start it with `node build`, which is the `start` script.
+
+This is **not** a static site. `adapter-static` went away with the SPA. Do not deploy `build/` to a static host.
+
+```bash
+pnpm build
+ORIGIN=https://app.example.com OAUTH_CLIENT_SECRET=... node build
+```
+
+Serverless targets do not work with the default session store, because each invocation gets its own memory. `@sveltejs/adapter-auto` is deliberately absent for the same reason: a switch to it silently breaks the in-memory store.
+
+## Demo limitations
+
+- **In-process session store** — one instance only. See "Swapping the session store".
+- **Published dev client secret** — good for `localhost`, refused outside development.
+- **No Grant persistence** — the AS asks for consent on every authorization.
 
 ## Scripts
 
-- `pnpm dev` — start the Vite dev server
-- `pnpm build` — produce a static SPA build (in `build/`) via `adapter-static`
+- `pnpm dev` — start the Vite dev server on `http://localhost:5173`
+- `pnpm build` — build the Node server into `build/`
+- `pnpm start` — run the built server (`node build`)
 - `pnpm preview` — preview the production build
 - `pnpm check` — type-check with `svelte-check`
+- `pnpm test` — run the Vitest suite
 - `pnpm lint` / `pnpm format` — check / apply Prettier formatting
 
 ## Stack
 
-SvelteKit 2 · Svelte 5 (runes) · Vite 7 · TypeScript 5 · Prettier 3.
-The app runs entirely in the browser (`ssr`/`prerender` disabled in
-`src/routes/+layout.ts`), so `adapter-static` emits an SPA with an
-`index.html` fallback.
+SvelteKit 2 · Svelte 5 (runes) · adapter-node · Vite 7 · TypeScript 5 · `jose` 6 · Vitest · Prettier 3.
+
+The security-critical code is unit-tested in [`src/lib/server`](src/lib/server): `id_token` validation, including `alg:none` and algorithm-confusion attempts; the `state` consume-once path; session TTL and eviction; and the route handlers that mint and destroy the `sid` cookie.

@@ -1,6 +1,6 @@
 # Plan: BFF rewrite + server hardening
 
-See [ADR-0001](../adr/0001-backend-for-frontend.md) and [CONTEXT.md](../../CONTEXT.md).
+See [ADR-0001](../../adr/0001-backend-for-frontend.md) and [CONTEXT.md](../../../CONTEXT.md).
 
 ## Locked decisions
 

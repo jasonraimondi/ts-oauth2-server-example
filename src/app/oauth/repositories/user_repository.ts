@@ -1,9 +1,13 @@
 import { eq } from "drizzle-orm";
-import type { GrantIdentifier, OAuthUserRepository } from "@jmondi/oauth2-server";
+import type {
+  GrantIdentifier,
+  OAuthClient,
+  OAuthUserIdentifier,
+  OAuthUserRepository,
+} from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
 import { users } from "../../../db/schema.js";
-import { Client } from "../entities/client.js";
 import { User } from "../entities/user.js";
 import { verifyPasswordOrThrow, InvalidAuthorizationError } from "../../../lib/password.js";
 
@@ -11,20 +15,20 @@ import { verifyPasswordOrThrow, InvalidAuthorizationError } from "../../../lib/p
 // can degrade gracefully on "no such user" while letting infrastructure errors
 // surface instead of silently swallowing them.
 export class NotFoundError extends Error {
-  name = "NotFoundError";
+  override name = "NotFoundError";
 }
 
 export class UserRepository implements OAuthUserRepository {
   constructor(private readonly db: Database) {}
 
   async getUserByCredentials(
-    identifier: string,
+    identifier: OAuthUserIdentifier,
     password?: string,
     _grantType?: GrantIdentifier,
-    _client?: Client,
+    _client?: OAuthClient,
   ): Promise<User> {
     const row = await this.db.query.users.findFirst({
-      where: eq(users.id, identifier),
+      where: eq(users.id, String(identifier)),
     });
 
     if (!row) {

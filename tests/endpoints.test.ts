@@ -6,6 +6,7 @@ import { requestFromVanilla, responseToVanilla } from "@jmondi/oauth2-server/van
 
 import { app } from "../src/app.js";
 import { authorizationServer, userRepository } from "../src/container.js";
+import { readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
@@ -59,7 +60,7 @@ describe("POST /api/oauth2/token error mapping", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json).toMatchObject({
       status: res.status,
       error: expect.any(String),
@@ -88,7 +89,7 @@ describe("POST /api/oauth2/token happy path", () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.access_token).toEqual(expect.any(String));
     expect(json.refresh_token).toEqual(expect.any(String));
     expect(json.token_type).toBe("Bearer");
@@ -118,42 +119,57 @@ describe("POST /api/oauth2/token happy path", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const json = await res.json();
+    const json = await readJson(res);
     expect(json.error).toEqual(expect.any(String));
     expect(json.error_description).toEqual(expect.any(String));
   });
 });
 
+/** Spend a freshly minted auth code for a token pair. */
+async function exchangeCode(code: string, verifier: string): Promise<Record<string, any>> {
+  const tokenRes = await app.request("/api/oauth2/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT,
+      code,
+      code_verifier: verifier,
+    }),
+  });
+  expect(tokenRes.status).toBe(200);
+  return readJson(tokenRes);
+}
+
+async function revoke(token: string, hint: "access_token" | "refresh_token"): Promise<Response> {
+  return app.request("/api/oauth2/revoke", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: CLIENT_ID, token, token_type_hint: hint }),
+  });
+}
+
 describe("POST /api/oauth2/revoke", () => {
-  // The refresh-token path (getByRefreshToken) exercises the route + vanilla
-  // bridge for a valid 200 revoke. The access-token revoke path (which needs
-  // getByAccessToken, now implemented) is covered in oauth-flow's revocation test.
   it("returns 200 for a valid revoke of an issued refresh token", async () => {
     const { code, verifier } = await mintAuthCode();
+    const { refresh_token } = await exchangeCode(code, verifier);
 
-    const tokenRes = await app.request("/api/oauth2/token", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: CLIENT_ID,
-        redirect_uri: REDIRECT,
-        code,
-        code_verifier: verifier,
-      }),
-    });
-    const { refresh_token } = await tokenRes.json();
+    expect((await revoke(refresh_token, "refresh_token")).status).toBe(200);
+  });
 
-    const res = await app.request("/api/oauth2/revoke", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        token: refresh_token,
-        token_type_hint: "refresh_token",
-      }),
-    });
+  it("revokes an issued access token, which a resource server then rejects", async () => {
+    const { code, verifier } = await mintAuthCode();
+    const { access_token } = await exchangeCode(code, verifier);
+    const contacts = async (): Promise<Response> =>
+      app.request("/api/contacts", { headers: { Authorization: `Bearer ${access_token}` } });
 
-    expect(res.status).toBe(200);
+    expect((await contacts()).status).toBe(200);
+
+    expect((await revoke(access_token, "access_token")).status).toBe(200);
+
+    // The JWT is still inside its exp window, so a 401 here can only come from
+    // the stored-row revocation check the resource route performs.
+    expect((await contacts()).status).toBe(401);
   });
 });

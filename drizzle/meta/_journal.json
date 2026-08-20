@@ -15,6 +15,13 @@
       "when": 1781385853302,
       "tag": "0001_workable_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787239858523,
+      "tag": "0002_boring_invaders",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { app } from "../src/app.js";
-import { codeFromApprove, mintJid, pkce, SEEDED_USER_ID } from "./helpers.js";
+import { db } from "../src/container.js";
+import { users } from "../src/db/schema.js";
+import {
+  codeFromApprove,
+  formHeaders,
+  mintJid,
+  pkce,
+  readJson,
+  SEEDED_USER_ID,
+} from "./helpers.js";
 
 const CLIENT_ID = "9b8c7d6e-5f40-4a3b-8c2d-1e0f9a8b7c6d"; // OIDC Demo Client
 const USER_ID = SEEDED_USER_ID;
@@ -14,8 +24,8 @@ function decodeJwt(token: string): {
 } {
   const [header, payload] = token.split(".");
   return {
-    header: JSON.parse(Buffer.from(header, "base64url").toString("utf8")),
-    payload: JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
+    header: JSON.parse(Buffer.from(header!, "base64url").toString("utf8")),
+    payload: JSON.parse(Buffer.from(payload!, "base64url").toString("utf8")),
   };
 }
 
@@ -49,7 +59,7 @@ async function runOpenIdFlow(nonce: string): Promise<Record<string, any>> {
     }),
   });
   expect(tokenRes.status).toBe(200);
-  return tokenRes.json();
+  return readJson(tokenRes);
 }
 
 describe("OIDC discovery document", () => {
@@ -58,12 +68,13 @@ describe("OIDC discovery document", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const doc = await res.json();
+    const doc = await readJson(res);
     expect(doc.issuer).toBe(ISSUER);
     expect(doc.authorization_endpoint).toBe(`${ISSUER}/api/oauth2/authorize`);
     expect(doc.token_endpoint).toBe(`${ISSUER}/api/oauth2/token`);
     expect(doc.userinfo_endpoint).toBe(`${ISSUER}/api/oauth2/userinfo`);
     expect(doc.jwks_uri).toBe(`${ISSUER}/.well-known/jwks.json`);
+    expect(doc.revocation_endpoint).toBe(`${ISSUER}/api/oauth2/revoke`);
     expect(doc.id_token_signing_alg_values_supported).toContain("RS256");
     expect(doc.scopes_supported).toEqual(expect.arrayContaining(["openid", "email", "profile"]));
   });
@@ -75,7 +86,7 @@ describe("OIDC JWKS", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const { keys } = await res.json();
+    const { keys } = await readJson(res);
     expect(Array.isArray(keys)).toBe(true);
     expect(keys.length).toBeGreaterThanOrEqual(1);
     const [key] = keys;
@@ -122,7 +133,7 @@ describe("OIDC userinfo endpoint", () => {
     });
 
     expect(res.status).toBe(200);
-    const claims = await res.json();
+    const claims = await readJson(res);
     expect(claims.sub).toBe(USER_ID);
     expect(claims.email).toBe("jason@example.com");
     expect(claims.name).toEqual(expect.any(String));
@@ -131,5 +142,80 @@ describe("OIDC userinfo endpoint", () => {
   it("rejects a request with no bearer token", async () => {
     const res = await app.request("/api/oauth2/userinfo");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("OIDC prompt and max_age enforcement", () => {
+  // The library parses both parameters onto the AuthorizationRequest and leaves
+  // acting on them to the application (OIDC Core §3.1.2.1).
+  const setLastLogin = (at: Date | null) =>
+    db.update(users).set({ lastLoginAt: at }).where(eq(users.id, USER_ID));
+
+  afterAll(() => setLastLogin(null));
+
+  function query(extra: string, state = "prompt"): string {
+    return `${openidAuthorizeQuery(pkce().challenge, state, "n0nce")}&${extra}`;
+  }
+
+  async function authorize(q: string, jid?: string): Promise<Response> {
+    return app.request(`/api/oauth2/authorize?${q}`, {
+      headers: jid ? { Cookie: `jid=${jid}` } : {},
+      redirect: "manual",
+    });
+  }
+
+  it("answers prompt=none without a session as login_required on the redirect_uri", async () => {
+    const res = await authorize(query("prompt=none", "nosession"));
+
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe(REDIRECT);
+    expect(location.searchParams.get("error")).toBe("login_required");
+    expect(location.searchParams.get("state")).toBe("nosession");
+  });
+
+  it("lets prompt=none through when the session already answers the request", async () => {
+    await setLastLogin(new Date());
+    const res = await authorize(query("prompt=none"), await mintJid());
+
+    expect(res.headers.get("location")!.startsWith("/api/scopes?")).toBe(true);
+  });
+
+  it("treats prompt=login as logged out even with a valid session", async () => {
+    await setLastLogin(new Date());
+    const res = await authorize(query("prompt=login"), await mintJid());
+
+    expect(res.headers.get("location")!.startsWith("/api/login?")).toBe(true);
+  });
+
+  it("sends a session older than max_age back through login", async () => {
+    await setLastLogin(new Date(Date.now() - 60 * 60_000));
+    const res = await authorize(query("max_age=300"), await mintJid());
+
+    expect(res.headers.get("location")!.startsWith("/api/login?")).toBe(true);
+  });
+
+  it("accepts a session younger than max_age", async () => {
+    await setLastLogin(new Date());
+    const res = await authorize(query("max_age=300"), await mintJid());
+
+    expect(res.headers.get("location")!.startsWith("/api/scopes?")).toBe(true);
+  });
+
+  it("applies the same check when consent is submitted", async () => {
+    await setLastLogin(new Date(Date.now() - 60 * 60_000));
+    const q = query("max_age=300&prompt=none", "onpost");
+
+    const res = await app.request(`/api/scopes?${q}`, {
+      method: "POST",
+      headers: { ...formHeaders, Cookie: `jid=${await mintJid()}` },
+      body: "accept=yes",
+      redirect: "manual",
+    });
+
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.searchParams.get("error")).toBe("login_required");
+    expect(location.searchParams.get("code")).toBeNull();
   });
 });

@@ -155,6 +155,43 @@ describe("exchangeCode", () => {
     expect(body.get("code_verifier")).toBe("the-verifier");
   });
 
+  it("rejects a 200 body whose access_token is not a string", async () => {
+    const fetchMock = (async () =>
+      new Response(JSON.stringify({ access_token: 42, token_type: "Bearer" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch;
+    await expect(
+      exchangeCode({
+        fetch: fetchMock,
+        tokenEndpoint: `${ISSUER}/api/oauth2/token`,
+        clientId: CLIENT_ID,
+        clientSecret: "sec",
+        redirectUri: "x",
+        code: "x",
+        codeVerifier: "x",
+      }),
+    ).rejects.toThrow(/access_token/);
+  });
+
+  it("drops non-string optional fields instead of passing them through", async () => {
+    const fetchMock = (async () =>
+      new Response(
+        JSON.stringify({ access_token: "at", token_type: "Bearer", refresh_token: { a: 1 } }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as unknown as typeof fetch;
+    const tokens = await exchangeCode({
+      fetch: fetchMock,
+      tokenEndpoint: `${ISSUER}/api/oauth2/token`,
+      clientId: CLIENT_ID,
+      clientSecret: "sec",
+      redirectUri: "x",
+      code: "x",
+      codeVerifier: "x",
+    });
+    expect(tokens.refresh_token).toBeUndefined();
+  });
+
   it("throws on a non-2xx token response", async () => {
     const fetchMock = (async () =>
       new Response(JSON.stringify({ error: "invalid_grant" }), {
@@ -193,6 +230,21 @@ describe("fetchUserInfo", () => {
 
     expect(claims.email).toBe("ada@example.com");
     expect(authorization).toBe("Bearer AT");
+  });
+
+  it("throws when the body is not a JSON object", async () => {
+    const fetchMock = (async () =>
+      new Response(JSON.stringify(["not", "an", "object"]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch;
+    await expect(
+      fetchUserInfo({
+        fetch: fetchMock,
+        userinfoEndpoint: `${ISSUER}/userinfo`,
+        accessToken: "AT",
+      }),
+    ).rejects.toThrow(/non-object/);
   });
 
   it("throws on a non-2xx userinfo response", async () => {

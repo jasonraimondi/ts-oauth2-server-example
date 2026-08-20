@@ -22,9 +22,6 @@ export const grantTypes = pgEnum("grant_types", [
 
 export const codeChallengeMethod = pgEnum("code_challenge_method", ["S256", "plain"]);
 
-// Column DB names are derived from the camelCase keys by `casing: "snake_case"`
-// (set on the drizzle() client and in drizzle.config.ts), so `passwordHash`
-// becomes the `password_hash` column without spelling it out here.
 export const users = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
   email: varchar({ length: 255 }).notNull().unique(),
@@ -53,6 +50,8 @@ export const oauthScopes = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     name: text().notNull(),
+    // Shown on the consent screen in place of the raw scope name.
+    description: text(),
     createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
     updatedAt: timestamp(),
   },
@@ -61,39 +60,54 @@ export const oauthScopes = pgTable(
   table => [index("idx_oauth_scopes_name").on(table.name)],
 );
 
-export const oauthAuthCodes = pgTable("oauth_auth_codes", {
-  code: text().primaryKey(),
-  redirectUri: text(),
-  codeChallenge: text(),
-  codeChallengeMethod: codeChallengeMethod().notNull().default("plain"),
-  nonce: text(),
-  authTime: integer(),
-  maxAge: integer(),
-  expiresAt: timestamp().notNull(),
-  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
-  updatedAt: timestamp(),
-  userId: uuid().references(() => users.id, { onDelete: "set null" }),
-  clientId: uuid()
-    .notNull()
-    .references(() => oauthClients.id, { onDelete: "cascade" }),
-});
+export const oauthAuthCodes = pgTable(
+  "oauth_auth_codes",
+  {
+    code: text().primaryKey(),
+    redirectUri: text(),
+    codeChallenge: text(),
+    codeChallengeMethod: codeChallengeMethod().notNull().default("plain"),
+    nonce: text(),
+    authTime: integer(),
+    maxAge: integer(),
+    expiresAt: timestamp().notNull(),
+    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    updatedAt: timestamp(),
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
+    clientId: uuid()
+      .notNull()
+      .references(() => oauthClients.id, { onDelete: "cascade" }),
+  },
+  // The prune job sweeps codes by expiry.
+  table => [index("idx_oauth_auth_codes_expires_at").on(table.expiresAt)],
+);
 
-export const oauthTokens = pgTable("oauth_tokens", {
-  accessToken: text().primaryKey(),
-  accessTokenExpiresAt: timestamp().notNull(),
-  refreshToken: text().unique(),
-  refreshTokenExpiresAt: timestamp(),
-  // The authorization code this token chain descends from — the refresh-token
-  // "family" key. The library threads it across rotations; we revoke the whole
-  // family on refresh-token reuse or auth-code replay (RFC 9700).
-  originatingAuthCodeId: text(),
-  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
-  updatedAt: timestamp(),
-  clientId: uuid()
-    .notNull()
-    .references(() => oauthClients.id, { onDelete: "cascade" }),
-  userId: uuid().references(() => users.id, { onDelete: "set null" }),
-});
+export const oauthTokens = pgTable(
+  "oauth_tokens",
+  {
+    accessToken: text().primaryKey(),
+    accessTokenExpiresAt: timestamp().notNull(),
+    refreshToken: text().unique(),
+    refreshTokenExpiresAt: timestamp(),
+    // The authorization code this token chain descends from — the refresh-token
+    // "family" key. The library threads it across rotations; we revoke the whole
+    // family on refresh-token reuse or auth-code replay (RFC 9700).
+    originatingAuthCodeId: text(),
+    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    updatedAt: timestamp(),
+    clientId: uuid()
+      .notNull()
+      .references(() => oauthClients.id, { onDelete: "cascade" }),
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
+  },
+  table => [
+    // The family lookup on the hottest security-critical path: reuse detection
+    // revokes descendants by this column, and it grows with the token table.
+    index("idx_oauth_tokens_originating_auth_code_id").on(table.originatingAuthCodeId),
+    // The prune job sweeps tokens by expiry.
+    index("idx_oauth_tokens_access_token_expires_at").on(table.accessTokenExpiresAt),
+  ],
+);
 
 export const oauthClientScopes = pgTable(
   "oauth_client_scopes",

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { DateInterval, generateRandomToken, OAuthException } from "@jmondi/oauth2-server";
-import type { OAuthAuthCode, OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
+import type { OAuthAuthCodeRepository } from "@jmondi/oauth2-server";
 
 import type { Database } from "../../../db/index.js";
 import { oauthAuthCodes, oauthAuthCodeScopes } from "../../../db/schema.js";
@@ -39,7 +39,7 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
     return authCode.isExpired;
   }
 
-  issueAuthCode(client: Client, user: User | undefined, scopes: Scope[]): OAuthAuthCode {
+  issueAuthCode(client: Client, user: User | undefined, scopes: Scope[]): AuthCode {
     return new AuthCode({
       redirectUri: null,
       code: generateRandomToken(),
@@ -48,7 +48,9 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
       nonce: null,
       authTime: null,
       maxAge: null,
-      expiresAt: new DateInterval("15m").getEndDate(),
+      // Placeholder: the library overwrites this with its own authCodeTTL before
+      // persist. 10 minutes is the ceiling RFC 6749 §4.1.2 recommends.
+      expiresAt: new DateInterval("10m").getEndDate(),
       client,
       clientId: client.id,
       user,

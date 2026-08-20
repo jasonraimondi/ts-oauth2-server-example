@@ -1,11 +1,13 @@
 import { Hono, type Context } from "hono";
-import { logger } from "hono/logger";
 import { csrf } from "hono/csrf";
+import { bodyLimit } from "hono/body-limit";
+import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, ilike, sql } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { isIP } from "node:net";
 
 import { html } from "hono/html";
 import { HTTPException } from "hono/http-exception";
@@ -15,14 +17,29 @@ import {
   responseToVanilla,
   handleVanillaError,
 } from "@jmondi/oauth2-server/vanilla";
-import { OAuthException, type AccessTokenPayload } from "@jmondi/oauth2-server";
+import { OAuthException, type AuthorizationRequest } from "@jmondi/oauth2-server";
 
-import { authorizationServer, db, accessTokenVerifier, tokenRepository } from "./container.js";
+import {
+  authorizationServer,
+  db,
+  accessTokenVerifier,
+  tokenRepository,
+  userRepository,
+} from "./container.js";
 import { users } from "./db/schema.js";
-import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password.js";
+import {
+  verifyPasswordOrThrow,
+  verifyDummyPassword,
+  InvalidAuthorizationError,
+} from "./lib/password.js";
+import type { User } from "./app/oauth/entities/user.js";
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
-import { signSession } from "./lib/session.js";
+import { clientIp } from "./lib/client_ip.js";
+import { requireScope } from "./lib/require_scope.js";
+import { accessLog, logJson } from "./lib/logger.js";
+import { signSession, SESSION_COOKIE_NAME, sessionCookiePrefix } from "./lib/session.js";
+import { env, isDev } from "./lib/config.js";
 import { Login } from "./views/Login.js";
 import { Scopes } from "./views/Scopes.js";
 
@@ -33,39 +50,85 @@ const queryString = (c: Context): string => new URL(c.req.url).search;
 // Session cookie lifetime: 30 days, matching the refresh-token window.
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-// A pre-computed bcrypt hash of a value no user will ever submit. The login
-// handler compares against this when a user (or its passwordHash) is missing, so
-// an unknown email costs the same bcrypt round as a known one — closing the
-// user-enumeration timing oracle.
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync("a-password-that-is-never-valid", 12);
+// Every credential failure answers with this one sentence, so the page can never
+// tell an unknown email apart from a wrong password.
+const LOGIN_FAILED = "Email or password is incorrect.";
 
 export const app = new Hono<AppEnv>();
 
-app.use(logger());
-app.use(currentUser);
+app.use(requestId());
+app.use(accessLog);
+app.use(
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      // Framing the consent screen and stealing a click on "Approve" is the
+      // classic OAuth clickjacking attack (RFC 6749 §10.13, RFC 9700).
+      frameAncestors: ["'none'"],
+      formAction: ["'self'"],
+      // The server-rendered views carry their CSS in an inline <style>.
+      styleSrc: ["'unsafe-inline'"],
+    },
+    xFrameOptions: "DENY",
+    // The login and consent URLs carry `state`, `nonce` and `code_challenge` in
+    // the query, so no Referer may leave for anywhere.
+    referrerPolicy: "no-referrer",
+    // HSTS over http://localhost would pin the browser to https for the whole
+    // host and break every other local project sharing it.
+    strictTransportSecurity: isDev() ? false : "max-age=31536000; includeSubDomains",
+  }),
+);
+app.use(bodyLimit({ maxSize: 64 * 1024 }));
+app.use(currentUser(userRepository));
 
 // One error boundary for the whole app: the package's handleVanillaError maps
 // OAuthExceptions to their RFC body shape and wraps anything else into a proper
 // OAuth internalServerError, so the pure OAuth routes can just throw. Hono's own
 // HTTPException (e.g. the csrf() 403) carries its own Response — honor it as-is.
-app.onError(err => {
+app.onError((err, c) => {
   if (err instanceof HTTPException) return err.getResponse();
+  // Without this line the only record of a 500 is the deliberately generic body
+  // the client receives. Protocol errors (invalid_grant and friends) are the
+  // caller's mistake rather than an incident, so they stay at debug.
+  const isProtocolError = err instanceof OAuthException;
+  logJson(isProtocolError ? "debug" : "error", err.message, {
+    requestId: c.get("requestId"),
+    method: c.req.method,
+    path: new URL(c.req.url).pathname,
+    stack: isProtocolError ? undefined : err.stack,
+  });
   return responseToVanilla(handleVanillaError(err));
+});
+
+// Liveness: answers as long as the process can serve, and deliberately touches
+// nothing else — a dependency outage must not get the container restarted.
+app.get("/healthz", c => c.text("ok"));
+
+// Readiness: the process is up, but take it out of rotation while it cannot
+// reach the database.
+app.get("/readyz", async c => {
+  try {
+    await db.execute(sql`select 1`);
+    return c.text("ready");
+  } catch (e) {
+    logJson("error", "readiness check failed", {
+      requestId: c.get("requestId"),
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return c.text("not ready", 503);
+  }
 });
 
 app.get("/api/ping", c => c.text("pong"));
 
 // Rate limits on the brute-forceable endpoints (credential stuffing on login,
-// code/secret grinding on token). Per-IP, in-memory; counts only POSTs. `max` is
+// code/secret grinding on token). Per client IP, in-memory. `max` is
 // env-overridable so the test suite, which hammers these from one address, can
 // lift the ceiling. Mounted before the routes so Hono wraps them.
-app.use(
-  "/api/login",
-  rateLimit({ windowMs: 15 * 60_000, max: Number(process.env.LOGIN_RATE_MAX ?? 10) }),
-);
+app.use("/api/login", rateLimit({ windowMs: 15 * 60_000, max: env.LOGIN_RATE_MAX }));
 app.use(
   "/api/oauth2/token",
-  rateLimit({ windowMs: 60_000, max: Number(process.env.TOKEN_RATE_MAX ?? 60) }),
+  rateLimit({ windowMs: 60_000, max: env.TOKEN_RATE_MAX, chargeFailuresOnly: true }),
 );
 
 app.post("/api/oauth2/token", async c => {
@@ -101,57 +164,57 @@ const CONTACTS = [
   { name: "Alan Turing", email: "alan@example.com" },
 ];
 
-// RFC 6750 invalid_token (401) without echoing the token value.
-const bearerUnauthorized = (c: Context, description: string) =>
-  c.json({ error: "invalid_token", error_description: description }, 401, {
-    "www-authenticate": `Bearer error="invalid_token", error_description="${description}"`,
-  });
+app.get(
+  "/api/contacts",
+  requireScope("contacts.read", { verifier: accessTokenVerifier, tokens: tokenRepository }),
+  c => c.json(CONTACTS),
+);
 
-// Scoped resource: requires a valid, non-revoked Bearer access token carrying the
-// contacts.read scope. Mirrors the /userinfo validation (AccessTokenVerifier pins
-// typ:at+jwt, alg:RS256, iss; revocation guard via the token row) and adds the
-// scope check the BFF will exercise.
-app.get("/api/contacts", async c => {
-  const authHeader = c.req.header("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return bearerUnauthorized(c, "A bearer access token is required.");
-  }
+// OIDC Core §3.1.2.1 leaves `prompt` and `max_age` for the application to
+// enforce; the library only parses them onto the request.
+const promptValues = (authRequest: AuthorizationRequest): Set<string> =>
+  new Set((authRequest.prompt ?? "").split(" ").filter(Boolean));
 
-  let payload: AccessTokenPayload;
-  try {
-    payload = await accessTokenVerifier.verify(authHeader);
-    // The JWT jti is the stored access-token row; a revoked (force-expired) row
-    // must be rejected even while the JWT itself is still within its exp window.
-    const stored = await tokenRepository.getByAccessToken(payload.jti as string);
-    if (await tokenRepository.isAccessTokenRevoked(stored)) {
-      return bearerUnauthorized(c, "The access token has been revoked.");
-    }
-  } catch (e) {
-    if (e instanceof OAuthException) {
-      return bearerUnauthorized(c, "The access token is invalid or expired.");
-    }
-    throw e;
-  }
+/**
+ * Whether the browser session may answer this authorize request: the user is
+ * logged in, the client did not demand a fresh login, and that login is younger
+ * than `max_age`. A session failing any of these counts as logged out.
+ */
+function sessionSatisfies(authRequest: AuthorizationRequest, user: User | undefined): user is User {
+  if (!user) return false;
+  if (promptValues(authRequest).has("login")) return false;
+  if (authRequest.maxAge === undefined) return true;
+  if (!user.lastLoginAt) return false;
+  return (Date.now() - user.lastLoginAt.getTime()) / 1000 <= authRequest.maxAge;
+}
 
-  const scopes = (typeof payload.scope === "string" ? payload.scope : "").split(" ");
-  if (!scopes.includes("contacts.read")) {
-    return c.json(
-      { error: "insufficient_scope", error_description: "The contacts.read scope is required." },
-      403,
-      { "www-authenticate": `Bearer error="insufficient_scope", scope="contacts.read"` },
-    );
-  }
+// RFC 6749 §4.1.2.1 error redirect back to the (already validated) client
+// redirect_uri, echoing state so the client can correlate the response.
+// redirectUri is guaranteed resolved by validateAuthorizationRequest; the fall back
+// to the client's first registered redirect_uri is only there for the impossible case.
+function errorRedirect(c: Context, authRequest: AuthorizationRequest, error: string): Response {
+  const target = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]!);
+  target.searchParams.set("error", error);
+  if (authRequest.state) target.searchParams.set("state", authRequest.state);
+  return c.redirect(target.toString(), 302);
+}
 
-  return c.json(CONTACTS);
-});
+// prompt=none forbids any user-visible UI, so a session that cannot answer the
+// request must come back as an error on the redirect_uri, never as a login page.
+const reauthenticate = (c: Context, authRequest: AuthorizationRequest): Response =>
+  promptValues(authRequest).has("none")
+    ? errorRedirect(c, authRequest, "login_required")
+    : c.redirect("/api/login" + queryString(c), 302);
 
 app.get("/api/oauth2/authorize", async c => {
   // Validate up front so a malformed authorize request fails before we send the
-  // user through login/consent. With a session, route to the consent screen
-  // (carrying the original query); without one, to login. We never auto-approve.
-  await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-  const target = c.get("user") ? "/api/scopes" : "/api/login";
-  return c.redirect(`${target}${queryString(c)}`, 302);
+  // user through login/consent. With a usable session, route to the consent
+  // screen (carrying the original query). We never auto-approve.
+  const authRequest = await authorizationServer.validateAuthorizationRequest(
+    await requestFromVanilla(c.req.raw),
+  );
+  if (!sessionSatisfies(authRequest, c.get("user"))) return reauthenticate(c, authRequest);
+  return c.redirect("/api/scopes" + queryString(c), 302);
 });
 
 // Origin-based CSRF, scoped ONLY to the browser form routes (never the
@@ -159,15 +222,41 @@ app.get("/api/oauth2/authorize", async c => {
 // Origin header against the request host for unsafe methods.
 app.use("/api/login", csrf());
 app.use("/api/scopes", csrf());
+app.use("/api/logout", csrf());
+
+const renderLogin = (
+  c: Context,
+  status: 200 | 400 | 401,
+  props: { error?: string; email?: string } = {},
+) =>
+  c.html(
+    html`<!DOCTYPE html>${(<Login action={"/api/login" + queryString(c)} {...props} />)}`,
+    status,
+  );
 
 app.get("/api/login", async c => {
   await authorizationServer.validateAuthorizationRequest(await requestFromVanilla(c.req.raw));
-  return c.html(html`<!DOCTYPE html>${(<Login action={"/api/login" + queryString(c)} />)}`);
+  return renderLogin(c, 200);
 });
 
 app.post(
   "/api/login",
-  zValidator("form", z.object({ email: z.email(), password: z.string() })),
+  zValidator(
+    "form",
+    // The password is capped because bcrypt is deliberately slow: unbounded input
+    // is a lever for making the server burn CPU on demand.
+    z.object({ email: z.email(), password: z.string().min(1).max(256) }),
+    (result, c) => {
+      if (result.success) return;
+      // Without a hook a malformed form answers with raw zod JSON, throwing away
+      // the authorize query string the user needs in order to continue.
+      const email = typeof result.data?.email === "string" ? result.data.email : undefined;
+      return renderLogin(c, 400, {
+        error: "Enter a valid email address and your password.",
+        email,
+      });
+    },
+  ),
   async c => {
     // Validate the authorize params from the QUERY only; building a body-less
     // request avoids consuming the form body that zValidator already parsed.
@@ -179,40 +268,63 @@ app.post(
 
     const row = await db.query.users.findFirst({ where: ilike(users.email, email) });
 
-    // Always run a bcrypt comparison — against the real hash, or a dummy hash
-    // when the user is missing or has no password — so the response time can't
-    // distinguish "no such user" from "wrong password" (user-enumeration oracle).
-    // Both failures collapse to one generic 401, never a 500/stack trace.
+    // An unknown email — or an account with no password, e.g. SSO-only — still
+    // costs one bcrypt round, or the response time would tell an attacker which
+    // addresses are registered. Both branches answer with the same sentence.
+    if (!row?.passwordHash) {
+      await verifyDummyPassword();
+      return renderLogin(c, 401, { error: LOGIN_FAILED, email });
+    }
+
     try {
-      await verifyPasswordOrThrow(password, row?.passwordHash ?? DUMMY_PASSWORD_HASH);
+      await verifyPasswordOrThrow(password, row.passwordHash);
     } catch (e) {
-      if (e instanceof InvalidAuthorizationError) return c.text("Unauthorized", 401);
+      if (e instanceof InvalidAuthorizationError) {
+        return renderLogin(c, 401, { error: LOGIN_FAILED, email });
+      }
       throw e;
     }
-    if (!row) return c.text("Unauthorized", 401);
 
-    // X-Forwarded-For is client-spoofable unless a trusted reverse proxy sets it;
-    // take the first hop (inet rejects a comma-separated list). Don't trust it for
-    // anything security-sensitive without a TRUST_PROXY gate in front.
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    await db
-      .update(users)
-      .set({ lastLoginAt: new Date(), lastLoginIP: ip })
-      .where(eq(users.id, row.id));
+    await recordLogin(c, row.id);
 
     const token = await signSession(row.id, SESSION_TTL_SECONDS, row.tokenVersion);
-    setCookie(c, "jid", token, {
+    setCookie(c, SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      // Secure only in production: browsers drop Secure cookies over
+      // Dropped only for local development: browsers refuse Secure cookies over
       // http://localhost, which would silently break the demo login.
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: !isDev(),
+      path: "/",
+      // Lax, not Strict: the authorize request reaches us as a top-level
+      // navigation from the client's own site, where a Strict cookie is withheld —
+      // every authorize would look logged out once the client and this server sit
+      // on different registrable domains. Lax still blocks cross-site POSTs.
+      sameSite: "Lax",
       maxAge: SESSION_TTL_SECONDS,
+      prefix: sessionCookiePrefix(),
     });
 
     return c.redirect("/api/oauth2/authorize" + queryString(c), 302);
   },
 );
+
+// The login audit trail must never cost a user their session, so a proxy header
+// that is not an address (the inet column would reject it) or a failed write is
+// recorded in the log and otherwise ignored.
+async function recordLogin(c: Context, userId: string): Promise<void> {
+  const ip = clientIp(c);
+  try {
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date(), lastLoginIP: isIP(ip) ? ip : null })
+      .where(eq(users.id, userId));
+  } catch (e) {
+    logJson("error", "failed to record login", {
+      requestId: c.get("requestId"),
+      userId,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
 
 // Logout revokes every session for the user by bumping tokenVersion: any cookie
 // minted with the old version (including one already captured) stops validating
@@ -225,9 +337,13 @@ app.post("/api/logout", async c => {
       .set({ tokenVersion: sql`token_version + 1` })
       .where(eq(users.id, user.id));
   }
-  // Mirror the path/secure attributes used at set time so the clearing cookie
-  // matches the original scope and the browser actually drops it.
-  deleteCookie(c, "jid", { path: "/", secure: process.env.NODE_ENV === "production" });
+  // Mirror the path/secure/prefix attributes used at set time so the clearing
+  // cookie matches the original scope and the browser actually drops it.
+  deleteCookie(c, SESSION_COOKIE_NAME, {
+    path: "/",
+    secure: !isDev(),
+    prefix: sessionCookiePrefix(),
+  });
   return c.text("Logged out");
 });
 
@@ -235,12 +351,18 @@ app.get("/api/scopes", async c => {
   const authRequest = await authorizationServer.validateAuthorizationRequest(
     await requestFromVanilla(c.req.raw),
   );
+  const user = c.get("user");
+  // An anonymous visitor gets no consent screen: it enumerates clients and scopes,
+  // and there is nobody here who can answer it.
+  if (!sessionSatisfies(authRequest, user)) return reauthenticate(c, authRequest);
+
   return c.html(
     html`<!DOCTYPE html>${(
         <Scopes
           action={"/api/scopes" + queryString(c)}
           client={authRequest.client}
           scopes={authRequest.scopes}
+          userEmail={user.email}
         />
       )}`,
   );
@@ -256,9 +378,8 @@ app.post(
     );
 
     const user = c.get("user");
-    if (!user) {
-      return c.redirect("/api/login" + queryString(c), 302);
-    }
+    if (!sessionSatisfies(authRequest, user)) return reauthenticate(c, authRequest);
+
     authRequest.user = user;
     // OIDC auth_time: when the end-user last authenticated. Falls back to now for
     // pre-existing sessions that predate a recorded login.
@@ -272,14 +393,7 @@ app.post(
     }
 
     // Deny: the authorization_code grant's completeAuthorizationRequest would
-    // surface a generic 400 here, so emit the RFC 6749 error redirect ourselves —
-    // bounce back to the (already validated) client redirect_uri with
-    // error=access_denied, echoing state so the client can correlate the response.
-    // redirectUri is guaranteed resolved by validateAuthorizationRequest above; fall
-    // back to the client's first registered redirect_uri to avoid a non-null assertion.
-    const denied = new URL(authRequest.redirectUri ?? authRequest.client.redirectUris[0]);
-    denied.searchParams.set("error", "access_denied");
-    if (authRequest.state) denied.searchParams.set("state", authRequest.state);
-    return c.redirect(denied.toString(), 302);
+    // surface a generic 400 here, so emit the RFC 6749 error redirect ourselves.
+    return errorRedirect(c, authRequest, "access_denied");
   },
 );

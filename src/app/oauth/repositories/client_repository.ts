@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { OAuthException } from "@jmondi/oauth2-server";
 import type { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmondi/oauth2-server";
@@ -6,6 +5,7 @@ import type { GrantIdentifier, OAuthClient, OAuthClientRepository } from "@jmond
 import type { Database } from "../../../db/index.js";
 import { oauthClients } from "../../../db/schema.js";
 import { Client } from "../entities/client.js";
+import { verifyPassword } from "../../../lib/password.js";
 
 export class ClientRepository implements OAuthClientRepository {
   constructor(private readonly db: Database) {}
@@ -39,7 +39,7 @@ export class ClientRepository implements OAuthClientRepository {
     // string compare. A null secret marks a public (PKCE-only) client. (ADR-0001.)
     if (client.secret) {
       if (!clientSecret) return false;
-      if (!(await bcrypt.compare(clientSecret, client.secret))) return false;
+      if (!(await verifyPassword(clientSecret, client.secret))) return false;
     }
     return client.allowedGrants.includes(grantType);
   }

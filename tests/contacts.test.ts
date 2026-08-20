@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db, jwt } from "../src/container.js";
 import { oauthTokens } from "../src/db/schema.js";
-import { codeFromApprove, mintJid, pkce } from "./helpers.js";
+import { codeFromApprove, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -29,7 +29,7 @@ async function mintAccessToken(scope: string): Promise<string> {
       code_verifier: verifier,
     }),
   });
-  const json = await res.json();
+  const json = await readJson(res);
   return json.access_token as string;
 }
 
@@ -42,7 +42,7 @@ describe("GET /api/contacts (Bearer + contacts.read scope)", () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await readJson(res);
     expect(Array.isArray(json)).toBe(true);
     expect(json.length).toBeGreaterThan(0);
     expect(json[0]).toHaveProperty("email");
@@ -56,7 +56,7 @@ describe("GET /api/contacts (Bearer + contacts.read scope)", () => {
     });
 
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe("insufficient_scope");
+    expect((await readJson(res)).error).toBe("insufficient_scope");
   });
 
   it("returns 401 when no bearer token is supplied", async () => {

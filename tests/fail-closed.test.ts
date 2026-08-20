@@ -4,6 +4,7 @@ import { resolveSessionSecret } from "../src/lib/session.js";
 import { resolvePrivateKey } from "../src/lib/oidc_key.js";
 
 const DEV_SECRET = "dev-insecure-session-secret-change-me";
+const REAL_SECRET = "a-real-production-secret-of-adequate-length";
 
 // Run `fn` with the given env overrides applied, then restore the prior values.
 // (undefined override = delete the var.) Tests share one process, so restoring
@@ -24,7 +25,7 @@ function withEnv(overrides: Record<string, string | undefined>, fn: () => void):
   }
 }
 
-describe("fail-closed secrets in production", () => {
+describe("fail-closed secrets outside development", () => {
   it("resolveSessionSecret throws in production when SESSION_SECRET is unset", () => {
     withEnv({ NODE_ENV: "production", SESSION_SECRET: undefined }, () => {
       expect(() => resolveSessionSecret()).toThrow(/SESSION_SECRET/);
@@ -37,16 +38,30 @@ describe("fail-closed secrets in production", () => {
     });
   });
 
-  it("resolveSessionSecret accepts a real secret in production", () => {
-    withEnv({ NODE_ENV: "production", SESSION_SECRET: "a-real-production-secret" }, () => {
-      expect(resolveSessionSecret()).toBe("a-real-production-secret");
+  it("resolveSessionSecret throws when NODE_ENV is unset", () => {
+    withEnv({ NODE_ENV: undefined, SESSION_SECRET: undefined }, () => {
+      expect(() => resolveSessionSecret()).toThrow(/SESSION_SECRET/);
     });
   });
 
-  it("resolveSessionSecret falls back to the dev default outside production", () => {
-    withEnv({ NODE_ENV: "test", SESSION_SECRET: undefined }, () => {
-      expect(resolveSessionSecret()).toBe(DEV_SECRET);
+  it("resolveSessionSecret throws when NODE_ENV is an unrecognized value", () => {
+    withEnv({ NODE_ENV: "staging", SESSION_SECRET: undefined }, () => {
+      expect(() => resolveSessionSecret()).toThrow(/SESSION_SECRET/);
     });
+  });
+
+  it("resolveSessionSecret accepts a real secret in production", () => {
+    withEnv({ NODE_ENV: "production", SESSION_SECRET: REAL_SECRET }, () => {
+      expect(resolveSessionSecret()).toBe(REAL_SECRET);
+    });
+  });
+
+  it("resolveSessionSecret falls back to the dev default in development and test", () => {
+    for (const nodeEnv of ["development", "test"]) {
+      withEnv({ NODE_ENV: nodeEnv, SESSION_SECRET: undefined }, () => {
+        expect(resolveSessionSecret()).toBe(DEV_SECRET);
+      });
+    }
   });
 
   it("resolvePrivateKey throws in production when OIDC_PRIVATE_KEY is unset", () => {
@@ -55,9 +70,17 @@ describe("fail-closed secrets in production", () => {
     });
   });
 
-  it("resolvePrivateKey generates an ephemeral key outside production", () => {
-    withEnv({ NODE_ENV: "test", OIDC_PRIVATE_KEY: undefined }, () => {
-      expect(resolvePrivateKey()).toContain("BEGIN PRIVATE KEY");
+  it("resolvePrivateKey throws when NODE_ENV is unset", () => {
+    withEnv({ NODE_ENV: undefined, OIDC_PRIVATE_KEY: undefined }, () => {
+      expect(() => resolvePrivateKey()).toThrow(/OIDC_PRIVATE_KEY/);
     });
+  });
+
+  it("resolvePrivateKey generates an ephemeral key in development and test", () => {
+    for (const nodeEnv of ["development", "test"]) {
+      withEnv({ NODE_ENV: nodeEnv, OIDC_PRIVATE_KEY: undefined }, () => {
+        expect(resolvePrivateKey()).toContain("BEGIN PRIVATE KEY");
+      });
+    }
   });
 });

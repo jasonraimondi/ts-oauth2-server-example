@@ -6,12 +6,14 @@ type ScopeModel = typeof oauthScopes.$inferSelect;
 export class Scope implements ScopeModel, OAuthScope {
   readonly id: string;
   name: string;
+  description: string | null;
   createdAt: Date;
   updatedAt: Date | null;
 
   constructor(entity: ScopeModel) {
     this.id = entity.id;
     this.name = entity.name;
+    this.description = entity.description;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
   }

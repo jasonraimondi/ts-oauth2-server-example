@@ -1,11 +1,11 @@
 <script lang="ts">
+  import "../app.css";
+
   import type { LayoutProps } from "./$types";
 
   let { children }: LayoutProps = $props();
 </script>
 
-<nav>
-  <a href="/">Home</a>
-</nav>
-
-{@render children()}
+<main>
+  {@render children()}
+</main>
