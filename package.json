@@ -7,7 +7,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
-    "lint": "oxlint --type-aware src",
+    "lint": "oxlint --type-aware --deny-warnings src tests",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "node dist/db/migrate.js",
