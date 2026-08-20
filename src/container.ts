@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 import {
   AccessTokenVerifier,
   AuthorizationServer,
@@ -16,6 +14,7 @@ import { AuthCodeRepository } from "./app/oauth/repositories/auth_code_repositor
 import { TokenRepository } from "./app/oauth/repositories/token_repository.js";
 import { MyCustomJwtService } from "./app/oauth/services/custom_jwt_service.js";
 import { resolvePrivateKey } from "./lib/oidc_key.js";
+import { env } from "./lib/config.js";
 
 const clientRepository = new ClientRepository(db);
 const scopeRepository = new ScopeRepository(db);
@@ -23,7 +22,7 @@ const userRepository = new UserRepository(db);
 const authCodeRepository = new AuthCodeRepository(db);
 const tokenRepository = new TokenRepository(db);
 
-const issuer = process.env.OIDC_ISSUER ?? "http://localhost:3000";
+const issuer = env.OIDC_ISSUER;
 const jwt = new MyCustomJwtService({ key: resolvePrivateKey() });
 
 const authorizationServer = new AuthorizationServer(

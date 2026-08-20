@@ -23,6 +23,7 @@ import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
 import { signSession } from "./lib/session.js";
+import { env, isDev } from "./lib/config.js";
 import { Login } from "./views/Login.js";
 import { Scopes } from "./views/Scopes.js";
 
@@ -59,14 +60,8 @@ app.get("/api/ping", c => c.text("pong"));
 // code/secret grinding on token). Per-IP, in-memory; counts only POSTs. `max` is
 // env-overridable so the test suite, which hammers these from one address, can
 // lift the ceiling. Mounted before the routes so Hono wraps them.
-app.use(
-  "/api/login",
-  rateLimit({ windowMs: 15 * 60_000, max: Number(process.env.LOGIN_RATE_MAX ?? 10) }),
-);
-app.use(
-  "/api/oauth2/token",
-  rateLimit({ windowMs: 60_000, max: Number(process.env.TOKEN_RATE_MAX ?? 60) }),
-);
+app.use("/api/login", rateLimit({ windowMs: 15 * 60_000, max: env.LOGIN_RATE_MAX }));
+app.use("/api/oauth2/token", rateLimit({ windowMs: 60_000, max: env.TOKEN_RATE_MAX }));
 
 app.post("/api/oauth2/token", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
@@ -203,9 +198,9 @@ app.post(
     const token = await signSession(row.id, SESSION_TTL_SECONDS, row.tokenVersion);
     setCookie(c, "jid", token, {
       httpOnly: true,
-      // Secure only in production: browsers drop Secure cookies over
+      // Dropped only for local development: browsers refuse Secure cookies over
       // http://localhost, which would silently break the demo login.
-      secure: process.env.NODE_ENV === "production",
+      secure: !isDev(),
       sameSite: "Strict",
       maxAge: SESSION_TTL_SECONDS,
     });
@@ -227,7 +222,7 @@ app.post("/api/logout", async c => {
   }
   // Mirror the path/secure attributes used at set time so the clearing cookie
   // matches the original scope and the browser actually drops it.
-  deleteCookie(c, "jid", { path: "/", secure: process.env.NODE_ENV === "production" });
+  deleteCookie(c, "jid", { path: "/", secure: !isDev() });
   return c.text("Logged out");
 });
 

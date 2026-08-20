@@ -1,5 +1,7 @@
 import { sign, verify } from "hono/jwt";
 
+import { isDev } from "./config.js";
+
 /**
  * The browser session cookie ("jid") lives in a DIFFERENT trust domain than the
  * OAuth/OIDC tokens: it authenticates the end-user to OUR login UI, while the
@@ -9,25 +11,28 @@ import { sign, verify } from "hono/jwt";
  * and a session cookie would become interchangeable. So the session gets its own
  * symmetric (HS256) secret, never published anywhere.
  *
- * Provide a stable secret via `SESSION_SECRET`. If it is unset we fall back to a
- * hardcoded dev default (with a warning), mirroring the OIDC ephemeral-key
- * pattern in oidc_key.ts — convenient for local dev, unsafe for production.
+ * Provide a stable secret via `SESSION_SECRET`. Only in local development do we
+ * fall back to a hardcoded dev default (with a warning), mirroring the OIDC
+ * ephemeral-key pattern in oidc_key.ts.
+ *
+ * Reads process.env directly rather than the parsed config snapshot so the
+ * fail-closed gate can be exercised against a mutated NODE_ENV.
  */
 const DEV_SECRET = "dev-insecure-session-secret-change-me";
 
 export function resolveSessionSecret(): string {
   const fromEnv = process.env.SESSION_SECRET?.trim();
   if (fromEnv && fromEnv !== DEV_SECRET) return fromEnv;
-  // Fail closed in production: a missing or default secret means forgeable session
-  // cookies (HS256 with a publicly-known key), so refuse to boot rather than warn
-  // and carry on.
-  if (process.env.NODE_ENV === "production") {
+  // Fail closed anywhere but local development: a missing or default secret means
+  // forgeable session cookies (HS256 with a publicly-known key), so refuse to boot
+  // rather than warn and carry on.
+  if (!isDev()) {
     throw new Error(
-      "SESSION_SECRET must be set to a non-default value in production (refusing the insecure dev default).",
+      "SESSION_SECRET must be set to a non-default value unless NODE_ENV is development or test (refusing the insecure dev default).",
     );
   }
   console.warn(
-    "[session] SESSION_SECRET not set — using an insecure hardcoded dev default; set SESSION_SECRET in production.",
+    "[session] SESSION_SECRET not set — using an insecure hardcoded dev default; set SESSION_SECRET outside local development.",
   );
   return DEV_SECRET;
 }
