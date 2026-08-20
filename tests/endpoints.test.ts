@@ -125,36 +125,51 @@ describe("POST /api/oauth2/token happy path", () => {
   });
 });
 
+/** Spend a freshly minted auth code for a token pair. */
+async function exchangeCode(code: string, verifier: string): Promise<Record<string, any>> {
+  const tokenRes = await app.request("/api/oauth2/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT,
+      code,
+      code_verifier: verifier,
+    }),
+  });
+  expect(tokenRes.status).toBe(200);
+  return readJson(tokenRes);
+}
+
+async function revoke(token: string, hint: "access_token" | "refresh_token"): Promise<Response> {
+  return app.request("/api/oauth2/revoke", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: CLIENT_ID, token, token_type_hint: hint }),
+  });
+}
+
 describe("POST /api/oauth2/revoke", () => {
-  // The refresh-token path (getByRefreshToken) exercises the route + vanilla
-  // bridge for a valid 200 revoke. The access-token revoke path (which needs
-  // getByAccessToken, now implemented) is covered in oauth-flow's revocation test.
   it("returns 200 for a valid revoke of an issued refresh token", async () => {
     const { code, verifier } = await mintAuthCode();
+    const { refresh_token } = await exchangeCode(code, verifier);
 
-    const tokenRes = await app.request("/api/oauth2/token", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: CLIENT_ID,
-        redirect_uri: REDIRECT,
-        code,
-        code_verifier: verifier,
-      }),
-    });
-    const { refresh_token } = await readJson(tokenRes);
+    expect((await revoke(refresh_token, "refresh_token")).status).toBe(200);
+  });
 
-    const res = await app.request("/api/oauth2/revoke", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        token: refresh_token,
-        token_type_hint: "refresh_token",
-      }),
-    });
+  it("revokes an issued access token, which a resource server then rejects", async () => {
+    const { code, verifier } = await mintAuthCode();
+    const { access_token } = await exchangeCode(code, verifier);
+    const contacts = async (): Promise<Response> =>
+      app.request("/api/contacts", { headers: { Authorization: `Bearer ${access_token}` } });
 
-    expect(res.status).toBe(200);
+    expect((await contacts()).status).toBe(200);
+
+    expect((await revoke(access_token, "access_token")).status).toBe(200);
+
+    // The JWT is still inside its exp window, so a 401 here can only come from
+    // the stored-row revocation check the resource route performs.
+    expect((await contacts()).status).toBe(401);
   });
 });
