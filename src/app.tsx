@@ -7,6 +7,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, ilike, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { isIP } from "node:net";
 
 import { html } from "hono/html";
 import { HTTPException } from "hono/http-exception";
@@ -30,6 +31,7 @@ import { verifyPasswordOrThrow, InvalidAuthorizationError } from "./lib/password
 import { currentUser, type AppEnv } from "./app/oauth/current_user.js";
 import { rateLimit } from "./lib/rate_limit.js";
 import { requireScope } from "./lib/require_scope.js";
+import { clientIp } from "./lib/client_ip.js";
 import { accessLog, logJson } from "./lib/logger.js";
 import { signSession } from "./lib/session.js";
 import { env, isDev } from "./lib/config.js";
@@ -97,11 +99,14 @@ app.get("/readyz", async c => {
 app.get("/api/ping", c => c.text("pong"));
 
 // Rate limits on the brute-forceable endpoints (credential stuffing on login,
-// code/secret grinding on token). Per-IP, in-memory; counts only POSTs. `max` is
+// code/secret grinding on token). Per client IP, in-memory. `max` is
 // env-overridable so the test suite, which hammers these from one address, can
 // lift the ceiling. Mounted before the routes so Hono wraps them.
 app.use("/api/login", rateLimit({ windowMs: 15 * 60_000, max: env.LOGIN_RATE_MAX }));
-app.use("/api/oauth2/token", rateLimit({ windowMs: 60_000, max: env.TOKEN_RATE_MAX }));
+app.use(
+  "/api/oauth2/token",
+  rateLimit({ windowMs: 60_000, max: env.TOKEN_RATE_MAX, chargeFailuresOnly: true }),
+);
 
 app.post("/api/oauth2/token", async c => {
   const oauthReq = await requestFromVanilla(c.req.raw);
@@ -188,14 +193,7 @@ app.post(
     }
     if (!row) return c.text("Unauthorized", 401);
 
-    // X-Forwarded-For is client-spoofable unless a trusted reverse proxy sets it;
-    // take the first hop (inet rejects a comma-separated list). Don't trust it for
-    // anything security-sensitive without a TRUST_PROXY gate in front.
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    await db
-      .update(users)
-      .set({ lastLoginAt: new Date(), lastLoginIP: ip })
-      .where(eq(users.id, row.id));
+    await recordLogin(c, row.id);
 
     const token = await signSession(row.id, SESSION_TTL_SECONDS, row.tokenVersion);
     setCookie(c, "jid", token, {
@@ -210,6 +208,25 @@ app.post(
     return c.redirect("/api/oauth2/authorize" + queryString(c), 302);
   },
 );
+
+// The login audit trail must never cost a user their session, so a proxy header
+// that is not an address (the inet column would reject it) or a failed write is
+// recorded in the log and otherwise ignored.
+async function recordLogin(c: Context, userId: string): Promise<void> {
+  const ip = clientIp(c);
+  try {
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date(), lastLoginIP: isIP(ip) ? ip : null })
+      .where(eq(users.id, userId));
+  } catch (e) {
+    logJson("error", "failed to record login", {
+      requestId: c.get("requestId"),
+      userId,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
 
 // Logout revokes every session for the user by bumping tokenVersion: any cookie
 // minted with the old version (including one already captured) stops validating

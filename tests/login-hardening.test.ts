@@ -67,6 +67,22 @@ describe("login handler hardening (ITEM E)", () => {
   });
 });
 
+describe("login audit trail", () => {
+  it("logs in despite an X-Forwarded-For that is not an address", async () => {
+    // The header used to be written straight into an inet column, so a garbage
+    // value passed password verification and then 500'd on the Postgres parse.
+    const { challenge } = pkce();
+    const res = await app.request(`/api/login?${authorizeQuery(challenge)}`, {
+      method: "POST",
+      headers: { ...formHeaders, "x-forwarded-for": "not-an-ip" },
+      body: "email=jason@example.com&password=password123",
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")!.startsWith("/api/oauth2/authorize?")).toBe(true);
+  });
+});
+
 describe("confidential client positive flow (ITEM F)", () => {
   it("drives authorization_code with the correct client secret to tokens", async () => {
     // Insert a CONFIDENTIAL client (with a secret) plus a registered scope, then
