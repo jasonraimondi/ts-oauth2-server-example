@@ -76,7 +76,7 @@ const refreshInFlight = new Map<string, Promise<Session>>();
 
 /**
  * Single-flight the token refresh for one session: concurrent requests (a
- * double-clicked action, or /api/me + /api/contacts firing together) share one
+ * double-clicked button, or two widgets loading at once) share one
  * in-flight refresh instead of each replaying the same refresh token. Without
  * this, the second request presents an already-rotated token, which the AS's
  * reuse detection (RFC 9700) treats as theft and revokes the whole family —
