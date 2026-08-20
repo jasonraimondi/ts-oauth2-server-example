@@ -11,7 +11,7 @@
 
   let contacts = $state<Contact[] | null>(null);
   let error = $state<string | null>(null);
-  let busy = $state(false);
+  let loading = $state(false);
 
   const NETWORK_ERROR = "Couldn't reach the server. Check your connection and try again.";
 
@@ -37,7 +37,7 @@
   }
 
   async function loadContacts() {
-    busy = true;
+    loading = true;
     error = null;
     contacts = null;
     try {
@@ -62,15 +62,15 @@
     } catch {
       error = NETWORK_ERROR;
     } finally {
-      busy = false;
+      loading = false;
     }
   }
 
   const logout: SubmitFunction = () => {
-    busy = true;
+    loading = true;
     error = null;
     return async ({ result, update }) => {
-      busy = false;
+      loading = false;
       if (result.type === "error") {
         error = NETWORK_ERROR;
         return;
@@ -94,10 +94,10 @@
 {#if data.user}
   <p>Signed in as <strong>{data.user.email ?? data.user.sub}</strong>.</p>
 
-  <button onclick={loadContacts} disabled={busy}>Load contacts</button>
+  <button onclick={loadContacts} disabled={loading}>Load contacts</button>
 
   <form method="POST" action="?/logout" use:enhance={logout}>
-    <button type="submit" disabled={busy}>Log out</button>
+    <button type="submit" disabled={loading}>Log out</button>
   </form>
 
   {#if contacts}
