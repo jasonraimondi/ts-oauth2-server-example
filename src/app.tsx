@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { csrf } from "hono/csrf";
 import { bodyLimit } from "hono/body-limit";
 import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
@@ -55,6 +56,26 @@ export const app = new Hono<AppEnv>();
 
 app.use(requestId());
 app.use(accessLog);
+app.use(
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      // Framing the consent screen and stealing a click on "Approve" is the
+      // classic OAuth clickjacking attack (RFC 6749 §10.13, RFC 9700).
+      frameAncestors: ["'none'"],
+      formAction: ["'self'"],
+      // The server-rendered views carry their CSS in an inline <style>.
+      styleSrc: ["'unsafe-inline'"],
+    },
+    xFrameOptions: "DENY",
+    // The login and consent URLs carry `state`, `nonce` and `code_challenge` in
+    // the query, so no Referer may leave for anywhere.
+    referrerPolicy: "no-referrer",
+    // HSTS over http://localhost would pin the browser to https for the whole
+    // host and break every other local project sharing it.
+    strictTransportSecurity: isDev() ? false : "max-age=31536000; includeSubDomains",
+  }),
+);
 app.use(bodyLimit({ maxSize: 64 * 1024 }));
 app.use(currentUser(userRepository));
 
