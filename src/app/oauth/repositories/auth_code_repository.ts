@@ -62,28 +62,35 @@ export class AuthCodeRepository implements OAuthAuthCodeRepository {
   }
 
   async persist({ user, client, scopes, ...authCode }: AuthCode): Promise<void> {
-    await this.db.transaction(async tx => {
-      await tx.insert(oauthAuthCodes).values({
-        code: authCode.code,
-        redirectUri: authCode.redirectUri,
-        codeChallenge: authCode.codeChallenge,
-        codeChallengeMethod: authCode.codeChallengeMethod,
-        nonce: authCode.nonce ?? null,
-        authTime: authCode.authTime ?? null,
-        maxAge: authCode.maxAge ?? null,
-        expiresAt: authCode.expiresAt,
-        userId: authCode.userId,
-        clientId: authCode.clientId,
-        createdAt: authCode.createdAt,
-        updatedAt: authCode.updatedAt,
-      });
-
-      if (scopes.length > 0) {
-        await tx
-          .insert(oauthAuthCodeScopes)
-          .values(scopes.map(scope => ({ authCodeCode: authCode.code, scopeId: scope.id })));
-      }
+    const insertCode = this.db.insert(oauthAuthCodes).values({
+      code: authCode.code,
+      redirectUri: authCode.redirectUri,
+      codeChallenge: authCode.codeChallenge,
+      codeChallengeMethod: authCode.codeChallengeMethod,
+      nonce: authCode.nonce ?? null,
+      authTime: authCode.authTime ?? null,
+      maxAge: authCode.maxAge ?? null,
+      expiresAt: authCode.expiresAt,
+      userId: authCode.userId,
+      clientId: authCode.clientId,
+      createdAt: authCode.createdAt,
+      updatedAt: authCode.updatedAt,
     });
+
+    if (scopes.length === 0) {
+      await insertCode;
+      return;
+    }
+
+    // batch() runs both statements in one implicit transaction (the one atomic
+    // multi-statement shape libsql and D1 share), so a failed scope insert never
+    // leaves an orphaned code behind.
+    await this.db.batch([
+      insertCode,
+      this.db
+        .insert(oauthAuthCodeScopes)
+        .values(scopes.map(scope => ({ authCodeCode: authCode.code, scopeId: scope.id }))),
+    ]);
   }
 
   async revoke(authCodeCode: string): Promise<void> {

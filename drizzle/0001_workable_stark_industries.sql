@@ -1,1 +1,0 @@
-ALTER TABLE "oauth_tokens" ADD COLUMN "originating_auth_code_id" text;

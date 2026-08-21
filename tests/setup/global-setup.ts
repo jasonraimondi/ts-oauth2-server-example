@@ -1,39 +1,32 @@
+import { rmSync } from "node:fs";
 import { config } from "dotenv";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 
 import * as schema from "../../src/db/schema.js";
 import { seed } from "../../src/db/seed.js";
 
 config({ path: "tests/.env.test" });
 
-const TEST_DB = "oauth_test";
-
 export default async function globalSetup(): Promise<void> {
   const testUrl = process.env.DATABASE_URL!;
-  const maintenanceUrl = testUrl.replace(/\/[^/]+$/, "/postgres");
 
-  const admin = postgres(maintenanceUrl, { max: 1 });
-  try {
-    // The database is created once and reused by every later run, so a schema that
-    // drifted out of step with drizzle/ survives here and makes the suite fail in
-    // confusing ways. The fix is to drop it (`dropdb oauth_test`) and let this
-    // rebuild it from the migrations — never to hand-patch the existing one.
-    const exists = await admin`SELECT 1 FROM pg_database WHERE datname = ${TEST_DB}`;
-    if (exists.length === 0) {
-      await admin.unsafe(`CREATE DATABASE "${TEST_DB}"`);
-    }
-  } finally {
-    await admin.end();
+  // The test database is a throwaway file, rebuilt from the migrations on every
+  // run so a schema that drifted out of step with drizzle/ can never survive here.
+  // A crashed run can leave a journal sidecar behind, and SQLite would replay it
+  // into the fresh file, so those go too.
+  const dbPath = testUrl.replace(/^file:/, "");
+  for (const suffix of ["", "-journal", "-wal", "-shm"]) {
+    rmSync(dbPath + suffix, { force: true });
   }
 
-  const client = postgres(testUrl, { max: 1, onnotice: () => {} });
+  const client = createClient({ url: testUrl });
   try {
     const testDb = drizzle(client, { schema, casing: "snake_case" });
     await migrate(testDb, { migrationsFolder: "./drizzle" });
     await seed(testDb);
   } finally {
-    await client.end();
+    client.close();
   }
 }

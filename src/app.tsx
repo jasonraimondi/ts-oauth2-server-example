@@ -6,7 +6,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, ilike, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { isIP } from "node:net";
 
 import { html } from "hono/html";
@@ -108,7 +108,7 @@ export function createApp(container: Container) {
   // reach the database.
   app.get("/readyz", async c => {
     try {
-      await db.execute(sql`select 1`);
+      await db.get(sql`select 1`);
       return c.text("ready");
     } catch (e) {
       logJson("error", "readiness check failed", {
@@ -269,7 +269,9 @@ export function createApp(container: Container) {
 
       const { email, password } = c.req.valid("form");
 
-      const row = await db.query.users.findFirst({ where: ilike(users.email, email) });
+      const row = await db.query.users.findFirst({
+        where: eq(sql`lower(${users.email})`, email.toLowerCase()),
+      });
 
       // An unknown email — or an account with no password, e.g. SSO-only — still
       // costs one bcrypt round, or the response time would tell an attacker which
@@ -311,8 +313,8 @@ export function createApp(container: Container) {
   );
 
   // The login audit trail must never cost a user their session, so a proxy header
-  // that is not an address (the inet column would reject it) or a failed write is
-  // recorded in the log and otherwise ignored.
+  // that is not an address or a failed write is recorded in the log and otherwise
+  // ignored.
   async function recordLogin(c: Context, userId: string): Promise<void> {
     const ip = clientIp(c);
     try {

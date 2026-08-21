@@ -1,11 +1,11 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { app } from "./app.js";
-import { db } from "./app.js";
+import { app, db } from "./app.js";
 import { oauthClients, oauthClientScopes, users } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
 import { formHeaders, mintJid, pkce, readJson } from "./helpers.js";
+import { truncateDynamic } from "./setup/truncate.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";
@@ -156,9 +156,7 @@ describe("confidential client positive flow (ITEM F)", () => {
       // Clear the dynamic tables this flow populated (CASCADE drops the scope
       // links) so the temp client has no FK referrers, then remove the client
       // and its client-scope link — restoring the seeded-state invariant.
-      await db.execute(
-        sql`TRUNCATE "oauth_token_scopes", "oauth_auth_code_scopes", "oauth_tokens", "oauth_auth_codes" RESTART IDENTITY CASCADE;`,
-      );
+      await truncateDynamic();
       await db.delete(oauthClientScopes).where(eq(oauthClientScopes.clientId, tempId));
       await db.delete(oauthClients).where(eq(oauthClients.id, tempId));
     }

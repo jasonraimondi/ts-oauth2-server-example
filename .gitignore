@@ -20,3 +20,6 @@ pb-error-report-*.log
 
 # parallel-agent worktrees
 .worktrees/
+
+# local sqlite databases
+/data/*.db*

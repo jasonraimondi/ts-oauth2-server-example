@@ -157,28 +157,34 @@ export class TokenRepository implements OAuthTokenRepository {
   }
 
   async persist({ user, client, scopes, ...token }: Token): Promise<void> {
-    await this.db.transaction(async tx => {
-      // No onConflictDoNothing: the access token is freshly random, so a primary-key
-      // collision is a real bug and should surface rather than be silently dropped.
-      await tx.insert(oauthTokens).values({
-        accessToken: token.accessToken,
-        accessTokenExpiresAt: token.accessTokenExpiresAt,
-        refreshToken: token.refreshToken,
-        refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-        originatingAuthCodeId: token.originatingAuthCodeId ?? null,
-        clientId: token.clientId,
-        userId: token.userId,
-        createdAt: token.createdAt,
-        updatedAt: token.updatedAt,
-      });
-
-      if (scopes.length > 0) {
-        await tx
-          .insert(oauthTokenScopes)
-          .values(scopes.map(scope => ({ accessToken: token.accessToken, scopeId: scope.id })))
-          .onConflictDoNothing();
-      }
+    // No onConflictDoNothing: the access token is freshly random, so a primary-key
+    // collision is a real bug and should surface rather than be silently dropped.
+    const insertToken = this.db.insert(oauthTokens).values({
+      accessToken: token.accessToken,
+      accessTokenExpiresAt: token.accessTokenExpiresAt,
+      refreshToken: token.refreshToken,
+      refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+      originatingAuthCodeId: token.originatingAuthCodeId ?? null,
+      clientId: token.clientId,
+      userId: token.userId,
+      createdAt: token.createdAt,
+      updatedAt: token.updatedAt,
     });
+
+    if (scopes.length === 0) {
+      await insertToken;
+      return;
+    }
+
+    // batch() runs both statements in one implicit transaction, so a failed scope
+    // insert never leaves a token behind with no scopes.
+    await this.db.batch([
+      insertToken,
+      this.db
+        .insert(oauthTokenScopes)
+        .values(scopes.map(scope => ({ accessToken: token.accessToken, scopeId: scope.id })))
+        .onConflictDoNothing(),
+    ]);
   }
 
   async revoke(tokenEntity: Token): Promise<void> {
