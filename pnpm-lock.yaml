@@ -18,8 +18,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1
       '@jmondi/oauth2-server':
-        specifier: 5.0.0-rc.6
-        version: 5.0.0-rc.6
+        specifier: 5.0.0
+        version: 5.0.0
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -573,8 +573,8 @@ packages:
     resolution: {integrity: sha512-o/MdnGQQF9rDAU0PFIrnAskhqRi+Jk1V/BczgTs6/U5YhSVKFgvJIfWuwwHkQk1OUm83mFx3Mhg+sUxRh3Z1Lg==}
     engines: {node: '>=18.0.0'}
 
-  '@jmondi/oauth2-server@5.0.0-rc.6':
-    resolution: {integrity: sha512-ocjd1QIhQxX+9CKb03+VwLPsTERPoizzJTPvIuxvtaPgLPMOCjhv8QQrrAx/dSyb4/hQoqXiD5WEExdG7bsK3g==}
+  '@jmondi/oauth2-server@5.0.0':
+    resolution: {integrity: sha512-W7RG1aso7yy6PJ4k2IdTXHJJgLWF+sQ+mIOhdpqtwuKhq0Q619mHn7nHWLZQKQ3mWU8oXdHUzN9quzXEPOgP3g==}
     engines: {node: '>=22'}
     peerDependencies:
       h3: ^1.15.0
@@ -1738,7 +1738,7 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  '@jmondi/oauth2-server@5.0.0-rc.6':
+  '@jmondi/oauth2-server@5.0.0':
     dependencies:
       jsonwebtoken: 9.0.3
       ms: 2.1.3
