@@ -36,8 +36,8 @@ overmind start  # or foreman start
 
 - `/src` - Hono server application
   - `index.ts` - `@hono/node-server` entry point (serves on port 3000)
-  - `app.tsx` - Hono routes + middleware (logger, currentUser, CSRF)
-  - `container.ts` - composition root wiring the AuthorizationServer, repositories, and JWT service
+  - `app.tsx` - `createApp(container)`: Hono routes + middleware (logger, currentUser, CSRF)
+  - `container.ts` - `createContainer(db)`, the composition root wiring the AuthorizationServer, repositories, and JWT service; `app.tsx` exports `createApp(container)` and `index.ts` wires both
   - `db/` - Drizzle schema, client, and seed
   - `app/oauth/` - entities, repositories, and services
   - `views/` - server-rendered forms (Hono JSX)

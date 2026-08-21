@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { db } from "../src/db/index.js";
+import { db } from "./app.js";
 import { oauthScopes, oauthTokens } from "../src/db/schema.js";
 
 const SEEDED_CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";

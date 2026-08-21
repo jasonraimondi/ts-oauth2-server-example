@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { app } from "../src/app.js";
-import { db } from "../src/container.js";
+import { app } from "./app.js";
+import { db } from "./app.js";
 import { oauthClients, oauthClientScopes, users } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
 import { formHeaders, mintJid, pkce, readJson } from "./helpers.js";

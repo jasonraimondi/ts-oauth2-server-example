@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { app } from "../src/app.js";
-import { db } from "../src/container.js";
+import { app } from "./app.js";
+import { db } from "./app.js";
 import { users } from "../src/db/schema.js";
 import { SEEDED_USER_ID, formHeaders, mintJid, pkce } from "./helpers.js";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { app } from "../src/app.js";
+import { app } from "./app.js";
 import { approveAuthorize, mintJid, pkce, readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";

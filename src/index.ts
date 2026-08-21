@@ -1,12 +1,16 @@
 import { serve } from "@hono/node-server";
 
-import { app } from "./app.js";
-import { closeDb } from "./db/index.js";
+import { createApp } from "./app.js";
+import { createContainer } from "./container.js";
+import { createDb } from "./db/index.js";
 import { env } from "./lib/config.js";
 
 // Long enough for in-flight OAuth requests to finish, short enough to stay under
 // a container orchestrator's default termination grace period.
 const SHUTDOWN_DEADLINE_MS = 10_000;
+
+const { db, close: closeDb } = createDb(env.DATABASE_URL);
+const app = createApp(createContainer(db));
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, info => {
   console.log(`Server running at http://localhost:${info.port}`);

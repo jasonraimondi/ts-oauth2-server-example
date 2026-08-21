@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { app } from "../src/app.js";
+import { app } from "./app.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";
 const REDIRECT = "http://localhost:5173/callback";

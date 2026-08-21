@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { app } from "../src/app.js";
+import { app } from "./app.js";
 import { signSession } from "../src/lib/session.js";
 
 export const SEEDED_USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
