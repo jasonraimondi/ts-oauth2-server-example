@@ -10,19 +10,31 @@ export const Scopes: FC<{
   userEmail?: string;
 }> = ({ action, client, scopes, userEmail }) => (
   <Layout title="Authorize">
-    <h1>Authorize {client.name}</h1>
-    {userEmail ? <p class="muted">Signed in as {userEmail}</p> : null}
+    <div>
+      <h1>Authorize {client.name}</h1>
+      {userEmail ? <p class="mono">Signed in as {userEmail}</p> : null}
+    </div>
     {scopes.length > 0 ? (
       <>
-        <p>Do you authorize {client.name} to access the following scopes?</p>
-        <ul>
+        <p class="lede">
+          Do you authorize <strong>{client.name}</strong> to access the following
+          scopes?
+        </p>
+        {/* Human description on the left, the raw scope key on the right: the
+            reader of this example needs to see both. */}
+        <ul class="rows">
           {scopes.map(scope => (
-            <li>{scope.description ?? scope.name}</li>
+            <li class="row">
+              <span>{scope.description ?? scope.name}</span>
+              <span class="row-key">{scope.name}</span>
+            </li>
           ))}
         </ul>
       </>
     ) : (
-      <p>{client.name} is requesting access to your account but no scopes.</p>
+      <p class="lede">
+        {client.name} is requesting access to your account but no scopes.
+      </p>
     )}
     {/* One form, two named submit buttons: the clicked button's value tells the
         server whether the user approved (yes) or denied (no) the request. */}

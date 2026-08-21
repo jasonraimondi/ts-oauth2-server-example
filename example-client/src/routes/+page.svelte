@@ -81,34 +81,55 @@
   };
 </script>
 
+<div class="brand">
+  <span class="brand-mark" aria-hidden="true">oa</span>
+  <span class="brand-name">BFF Demo</span>
+  {#if data.user}
+    <span class="chip">{data.user.email ?? data.user.sub}</span>
+  {:else}
+    <span class="brand-env">:5173</span>
+  {/if}
+</div>
+
 <h1>Backend-for-Frontend OAuth2 demo</h1>
 
 {#if authError}
-  <p role="status">{authError}</p>
+  <p class="notice" role="status">{authError}</p>
 {/if}
 
 {#if error}
-  <p role="alert">{error}</p>
+  <p class="alert" role="alert">{error}</p>
 {/if}
 
 {#if data.user}
-  <p>Signed in as <strong>{data.user.email ?? data.user.sub}</strong>.</p>
+  <div class="actions">
+    <button class="button-sm" onclick={loadContacts} disabled={loading}>
+      {loading ? "Loading…" : "Load contacts"}
+    </button>
 
-  <button onclick={loadContacts} disabled={loading}>Load contacts</button>
-
-  <form method="POST" action="?/logout" use:enhance={logout}>
-    <button type="submit" disabled={loading}>Log out</button>
-  </form>
+    <form method="POST" action="?/logout" use:enhance={logout}>
+      <button class="button-sm" type="submit" data-variant="secondary" disabled={loading}>
+        Log out
+      </button>
+    </form>
+  </div>
 
   {#if contacts}
-    <ul>
+    <ul class="rows">
+      <li class="rows-head">GET /api/contacts</li>
       {#each contacts as contact (contact.email)}
-        <li>{contact.name} — {contact.email}</li>
+        <li class="row">
+          <span>{contact.name}</span>
+          <span class="row-value">{contact.email}</span>
+        </li>
       {/each}
     </ul>
   {/if}
+
+  <p class="foot">tokens held server-side</p>
 {:else}
-  <p>Not logged in. The OAuth tokens are held by the server — never the browser.</p>
+  <p class="lede">Not logged in. The OAuth tokens are held by the server — never the browser.</p>
   <!-- Full-page navigation: the BFF starts the OAuth redirect dance. -->
-  <a href="/auth/login">Log in</a>
+  <a class="button" href="/auth/login" style="align-self: flex-start">Log in</a>
+  <p class="foot">GET /auth/login</p>
 {/if}

@@ -8,7 +8,7 @@ export const Login: FC<{ action: string; error?: string; email?: string }> = ({
   email,
 }) => (
   <Layout title="Login">
-    <h1>Login</h1>
+    <h1>Log in</h1>
     {error ? (
       <p class="alert" role="alert">
         {error}
@@ -16,7 +16,7 @@ export const Login: FC<{ action: string; error?: string; email?: string }> = ({
     ) : null}
     <form action={action} method="post">
       <label>
-        Email
+        <span>Email</span>
         <input
           type="email"
           name="email"
@@ -27,7 +27,7 @@ export const Login: FC<{ action: string; error?: string; email?: string }> = ({
         />
       </label>
       <label>
-        Password
+        <span>Password</span>
         <input
           type="password"
           name="password"
@@ -36,10 +36,8 @@ export const Login: FC<{ action: string; error?: string; email?: string }> = ({
           required
         />
       </label>
-      <div class="actions">
-        <button type="submit">Login</button>
-      </div>
+      <button type="submit">Log in</button>
     </form>
-    <p class="muted">Demo user: jason@example.com / password123</p>
+    <p class="foot">Demo user: jason@example.com / password123</p>
   </Layout>
 );

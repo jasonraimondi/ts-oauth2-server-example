@@ -1,29 +1,310 @@
+/* Shared visual language for the BFF client. Mirrors the token block in
+   src/views/Layout.tsx on the authorization server — login, consent and the
+   client are one product and must not look like three of them.
+
+   Accent is hue-per-theme: green in light, purple in dark. Both are oklch, so
+   a lighter/darker variant is a one-number change on L. */
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
 :root {
   color-scheme: light dark;
+
   --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
   --fg: #1a1a1a;
+  --fg-soft: #3a3a3a;
   --muted: #6b6b6b;
-  --accent: #c62f14;
-  --accent-fg: #ffffff;
   --border: #d9d9d9;
-  --radius: 4px;
+  --hairline: #f0f0f0;
+
+  --accent: oklch(0.49 0.11 155);
+  --accent-hover: oklch(0.41 0.1 155);
+  --accent-quiet: oklch(0.49 0.11 155);
+  --accent-fg: #ffffff;
+  --accent-sheen: transparent;
+
+  --radius: 6px;
+  --radius-lg: 10px;
   --space: 0.75rem;
+
+  --sans: "Instrument Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161616;
+    --bg: #101010;
+    --surface: #161616;
+    --surface-2: #1c1c1c;
     --fg: #ececec;
+    --fg-soft: #c9c9c9;
     --muted: #9a9a9a;
     --border: #3a3a3a;
+    --hairline: #242424;
+
+    --accent: oklch(0.58 0.22 285);
+    --accent-hover: oklch(0.65 0.19 285);
+    --accent-quiet: oklch(0.7 0.14 285);
+    --accent-sheen: rgba(255, 255, 255, 0.18);
   }
 }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
 main {
-  max-width: 40rem;
+  max-width: 30rem;
   margin-inline: auto;
-  padding-block: 2rem;
+  padding-block: 3rem;
   padding-inline: 1rem;
+}
+
+/* The card every screen lives in. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.625rem 1.625rem 1.375rem;
+}
+
+/* Brand row: mark, product name, and the machine detail on the right. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5625rem;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  font: 700 10px var(--mono);
+  letter-spacing: -0.02em;
+}
+.brand-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+.brand-env {
+  margin-left: auto;
+  font: 400 0.6875rem var(--mono);
+  color: var(--muted);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+p {
+  margin: 0;
+}
+
+.lede {
+  color: var(--muted);
+}
+
+.mono {
+  font: 400 0.78125rem var(--mono);
+  color: var(--muted);
+}
+
+/* Identity chip — who the session belongs to. */
+.chip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 3px 9px 3px 7px;
+  font: 400 0.6875rem var(--mono);
+  color: var(--muted);
+}
+.chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--accent);
+}
+
+/* Key/value rows: scopes on consent, contacts on the home page. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows-head {
+  padding: 0.4375rem 0.75rem;
+  background-color: var(--surface-2);
+  border-bottom: 1px solid var(--hairline);
+  font: 500 0.65625rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-quiet);
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5625rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.8125rem;
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.row-key {
+  font: 400 0.6875rem var(--mono);
+  color: var(--accent-quiet);
+  white-space: nowrap;
+}
+.row-value {
+  font: 400 0.71875rem var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Forms */
+form {
+  display: grid;
+  gap: 0.875rem;
+}
+label {
+  display: grid;
+  gap: 0.375rem;
+}
+label > span {
+  font-size: 0.65625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+input {
+  padding: 0.5625rem 0.6875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface-2);
+  color: var(--fg);
+  font: 400 0.84375rem var(--sans);
+}
+input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+button,
+.button {
+  display: inline-block;
+  padding: 0.6875rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  font: 600 0.84375rem var(--sans);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--accent-sheen);
+}
+button:hover:not(:disabled),
+.button:hover {
+  background-color: var(--accent-hover);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+button[data-variant="secondary"],
+.button[data-variant="secondary"] {
+  background-color: transparent;
+  border-color: var(--border);
+  color: var(--fg-soft);
+  box-shadow: none;
+}
+button[data-variant="secondary"]:hover:not(:disabled),
+.button[data-variant="secondary"]:hover {
+  background-color: var(--surface-2);
+  border-color: var(--muted);
+  color: var(--fg);
+}
+.button-sm {
+  padding: 0.5625rem 0.9375rem;
+  font-size: 0.8125rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.625rem;
+}
+.actions form {
+  display: contents;
+}
+
+/* Status messages */
+.alert,
+.notice {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  background-color: var(--surface-2);
+}
+
+/* Footnote: the machine-readable detail, kept out of the way. */
+.foot {
+  margin-top: auto;
+  border-top: 1px solid var(--hairline);
+  padding-top: 0.75rem;
+  font: 400 0.6875rem var(--mono);
+  color: var(--muted);
+}
+
+.status-code {
+  font: 500 0.6875rem var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--accent-quiet);
+}
+
+a {
+  color: var(--accent-quiet);
+}
+a:hover {
+  color: var(--accent-hover);
 }

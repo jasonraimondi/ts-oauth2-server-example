@@ -7,5 +7,9 @@
 </script>
 
 <main>
-  {@render children()}
+  <!-- Every client screen is one card; the brand row inside it belongs to the
+       page, because the identity chip is page state. -->
+  <div class="shell">
+    {@render children()}
+  </div>
 </main>
