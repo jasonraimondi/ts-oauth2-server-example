@@ -1,9 +1,10 @@
+import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { and, isNull, lt, or } from "drizzle-orm";
 
 import { createDb, type Database } from "./index.js";
 import { oauthAuthCodes, oauthTokens } from "./schema.js";
-import { env } from "../lib/config.js";
+import { requireDatabaseUrl } from "../lib/config.js";
 
 // Revocation here is force-expiry, so reuse detection (RFC 9700) reads dead rows
 // to recognise a replayed token and kill its family. Deleting a row the instant
@@ -45,7 +46,7 @@ export async function prune(database: Database, now = new Date()): Promise<Prune
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
-  const { db, close } = createDb(env.DATABASE_URL);
+  const { db, close } = createDb(requireDatabaseUrl());
   const counts = await prune(db);
   console.log(JSON.stringify({ msg: "pruned expired oauth rows", ...counts }));
   await close();

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import { env, isDev } from "./config.js";
 
@@ -7,10 +7,12 @@ import { env, isDev } from "./config.js";
 const MINIMUM_COST = 12;
 export const BCRYPT_COST = isDev() ? env.BCRYPT_COST : Math.max(env.BCRYPT_COST, MINIMUM_COST);
 
-// A value no login form can submit as a valid credential, hashed once at import
-// so verifyDummyPassword() below costs exactly one real bcrypt comparison.
+// A value no login form can submit as a valid credential, hashed once on first
+// use so verifyDummyPassword() below costs exactly one real bcrypt comparison.
+// Lazy rather than at import: a cost-12 hash in pure JS takes longer than a
+// Worker isolate is allowed to spend on startup.
 const DUMMY_PASSWORD = "a-password-that-is-never-valid";
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync(DUMMY_PASSWORD, BCRYPT_COST);
+let dummyPasswordHash: Promise<string> | undefined;
 
 export class InvalidAuthorizationError extends Error {
   override name = "InvalidAuthorizationError";
@@ -39,5 +41,6 @@ export async function verifyPasswordOrThrow(password: string, passwordHash: stri
  * wrong password and cannot be used to enumerate accounts.
  */
 export async function verifyDummyPassword(): Promise<void> {
-  await bcrypt.compare(DUMMY_PASSWORD, DUMMY_PASSWORD_HASH);
+  dummyPasswordHash ??= bcrypt.hash(DUMMY_PASSWORD, BCRYPT_COST);
+  await bcrypt.compare(DUMMY_PASSWORD, await dummyPasswordHash);
 }

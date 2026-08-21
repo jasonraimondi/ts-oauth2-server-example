@@ -1,0 +1,2 @@
+NODE_ENV=development
+OIDC_ISSUER=http://localhost:8787

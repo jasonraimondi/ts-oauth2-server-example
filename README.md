@@ -20,7 +20,7 @@ An example implementation of [@jmondi/oauth2-server](https://github.com/jasonrai
 
 ## Stack
 
-- **Server** — [Hono](https://hono.dev) on Node (`@hono/node-server`), listening on port `3000` with all routes under the `/api` prefix.
+- **Server** — [Hono](https://hono.dev) on Node (`@hono/node-server`), listening on port `3000` with all routes under the `/api` prefix. The same app also deploys to [Cloudflare Workers](#cloudflare-workers) via `src/worker.ts`.
 - **Database** — SQLite via [Drizzle ORM](https://orm.drizzle.team) (`@libsql/client`, a plain `file:` database).
 - **Views** — server-rendered login + consent forms using [Hono JSX](https://hono.dev/docs/guides/jsx).
 - **Tests** — [Vitest](https://vitest.dev) integration suite running against a throwaway SQLite file.
@@ -95,7 +95,11 @@ To start over from an empty database, run `pnpm db:reset`. It deletes `data/oaut
 | `pnpm db:migrate:prod` | apply migrations from the compiled output (`node dist/db/migrate.js`) |
 | `pnpm db:seed`         | seed the demo user, clients, and scopes                               |
 | `pnpm db:prune`        | delete expired token and auth-code rows                               |
-| `pnpm db:reset`        | drop the volume, then migrate and seed a fresh database               |
+| `pnpm db:reset`        | delete the SQLite file, then migrate and seed a fresh database        |
+| `pnpm cf:dev`          | serve the Worker entry point locally with `wrangler dev`              |
+| `pnpm cf:migrate`      | apply `drizzle/*.sql` to D1 (`--local` or `--remote`)                 |
+| `pnpm cf:seed`         | replay the seeded rows from `data/oauth.db` into D1                   |
+| `pnpm cf:deploy`       | deploy the Worker with `wrangler deploy`                              |
 | `pnpm lint`            | lint with oxlint                                                      |
 | `pnpm format`          | format with Prettier                                                  |
 
@@ -236,6 +240,32 @@ NODE_ENV=production \
 Skipping the overlap invalidates every token issued before the rotation, and every relying party still holding the old JWKS.
 
 Step 1 needs the JWKS to serve more than one key. This example signs with a single key, so publishing an overlap means extending `src/lib/oidc_key.ts` to carry a list of retired public keys. Plan for that before the first rotation, not during it.
+
+### Cloudflare Workers
+
+`src/worker.ts` is a second entry point for the same app: it builds the container from a [D1](https://developers.cloudflare.com/d1/) binding instead of a SQLite file and exports a Workers `fetch` handler. `wrangler.jsonc` declares the binding (`DB`), enables `nodejs_compat`, and points `migrations_dir` at the same `drizzle/` folder the Node migrator uses. The code is identical; only `src/index.ts` vs `src/worker.ts` differs.
+
+```bash
+pnpm exec wrangler d1 create oauth           # paste the id into wrangler.jsonc
+pnpm cf:migrate --remote                     # apply drizzle/*.sql to D1
+pnpm db:migrate && pnpm db:seed              # seed the local file...
+pnpm cf:seed --remote                        # ...and replay its rows into D1
+pnpm exec wrangler secret put OIDC_PRIVATE_KEY
+pnpm exec wrangler secret put SESSION_SECRET
+pnpm cf:deploy
+```
+
+Set `OIDC_ISSUER` in `wrangler.jsonc` to the Worker's public `https://` URL before deploying. `NODE_ENV` is `production` there, so the fail-closed rules under [Configuration](#configuration) apply.
+
+For local development, `cp .dev.vars.example .dev.vars`, then `pnpm cf:migrate --local`, `pnpm cf:seed --local`, and `pnpm cf:dev` serves the Worker on `http://localhost:8787` against a local D1.
+
+What to know before choosing this target:
+
+- **Seeding goes through the local file.** `seed.ts` needs a drizzle connection and there is none to remote D1, so `cf:seed` dumps the seeded rows from `data/oauth.db` and replays them with `wrangler d1 execute`. The script needs the `sqlite3` CLI.
+- **Password hashing is `bcryptjs`**, pure JS, because native `bcrypt` cannot load on Workers. A cost-12 hash takes a few hundred milliseconds of CPU, so the Worker needs the Paid plan's CPU budget; the Free plan's 10 ms ceiling is not enough for any real bcrypt cost.
+- **The rate limiter is per isolate.** It still runs, but an attacker spread across isolates sees a higher ceiling than `LOGIN_RATE_MAX` suggests. Back it with KV or Durable Objects before relying on it.
+- **`db.transaction()` is unavailable on D1.** The repositories already use `db.batch()` for their multi-statement writes, which D1 runs atomically. Keep to that shape when adding writes.
+- **Migrations have two journals.** `wrangler d1 migrations` and drizzle's Node migrator each track applied files in their own table. Use one per database, never both.
 
 ## Adapting for production
 

@@ -1,11 +1,11 @@
-import "dotenv/config";
-
 import { z } from "zod";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.string().min(1),
+  // Only the Node entry point and the db scripts need it; the Worker gets its
+  // database as a binding instead.
+  DATABASE_URL: z.string().min(1).optional(),
   // The BFF compares the discovery document's `issuer` byte-for-byte against its
   // own configured issuer, so a trailing slash breaks discovery rather than being
   // normalized away.
@@ -27,11 +27,15 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  console.error("[config] invalid environment:\n" + z.prettifyError(parsed.error));
-  process.exit(1);
+  throw new Error("[config] invalid environment:\n" + z.prettifyError(parsed.error));
 }
 
 export const env = parsed.data;
+
+export function requireDatabaseUrl(): string {
+  if (!env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
+  return env.DATABASE_URL;
+}
 
 /**
  * Whether the insecure local-development conveniences are allowed: the hardcoded
