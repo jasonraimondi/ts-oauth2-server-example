@@ -17,8 +17,7 @@ export const Scopes: FC<{
     {scopes.length > 0 ? (
       <>
         <p class="lede">
-          Do you authorize <strong>{client.name}</strong> to access the following
-          scopes?
+          Do you authorize <strong>{client.name}</strong> to access the following scopes?
         </p>
         {/* Human description on the left, the raw scope key on the right: the
             reader of this example needs to see both. */}
@@ -32,9 +31,7 @@ export const Scopes: FC<{
         </ul>
       </>
     ) : (
-      <p class="lede">
-        {client.name} is requesting access to your account but no scopes.
-      </p>
+      <p class="lede">{client.name} is requesting access to your account but no scopes.</p>
     )}
     {/* One form, two named submit buttons: the clicked button's value tells the
         server whether the user approved (yes) or denied (no) the request. */}
