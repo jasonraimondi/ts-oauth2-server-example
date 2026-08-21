@@ -13,7 +13,7 @@
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:seed": "tsx src/db/seed.ts",
     "db:prune": "tsx src/db/prune.ts",
-    "db:reset": "rm -f data/oauth.db && pnpm db:migrate && pnpm db:seed",
+    "db:reset": "rm -f data/oauth.db data/oauth.db-* && pnpm db:migrate && pnpm db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

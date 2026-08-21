@@ -14,7 +14,12 @@ export default async function globalSetup(): Promise<void> {
 
   // The test database is a throwaway file, rebuilt from the migrations on every
   // run so a schema that drifted out of step with drizzle/ can never survive here.
-  rmSync(testUrl.replace(/^file:/, ""), { force: true });
+  // A crashed run can leave a journal sidecar behind, and SQLite would replay it
+  // into the fresh file, so those go too.
+  const dbPath = testUrl.replace(/^file:/, "");
+  for (const suffix of ["", "-journal", "-wal", "-shm"]) {
+    rmSync(dbPath + suffix, { force: true });
+  }
 
   const client = createClient({ url: testUrl });
   try {
