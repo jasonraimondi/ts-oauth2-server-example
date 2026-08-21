@@ -1,58 +1,58 @@
 import { relations } from "drizzle-orm";
-import {
-  index,
-  inet,
-  integer,
-  pgEnum,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uuid,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const grantTypes = pgEnum("grant_types", [
+const GRANT_TYPES = [
   "client_credentials",
   "authorization_code",
   "refresh_token",
   "implicit",
   "password",
-]);
+] as const;
 
-export const codeChallengeMethod = pgEnum("code_challenge_method", ["S256", "plain"]);
+// SQLite has no uuid type; ids are text and generated application-side.
+const uuid = () => text();
+const uuidPrimaryKey = () =>
+  uuid()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID());
+// Millisecond epoch integers round-trip as Date through drizzle.
+const timestamp = () => integer({ mode: "timestamp_ms" });
+const timestampNow = () =>
+  timestamp()
+    .notNull()
+    .$defaultFn(() => new Date());
 
-export const users = pgTable("users", {
-  id: uuid().primaryKey().defaultRandom(),
-  email: varchar({ length: 255 }).notNull().unique(),
-  name: varchar({ length: 255 }),
-  passwordHash: varchar({ length: 255 }),
+export const users = sqliteTable("users", {
+  id: uuidPrimaryKey(),
+  email: text().notNull().unique(),
+  name: text(),
+  passwordHash: text(),
   tokenVersion: integer().notNull().default(0),
-  lastLoginAt: timestamp({ precision: 6 }),
-  lastLoginIP: inet(),
-  createdIP: inet().notNull(),
-  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+  lastLoginAt: timestamp(),
+  lastLoginIP: text(),
+  createdIP: text().notNull(),
+  createdAt: timestampNow(),
   updatedAt: timestamp(),
 });
 
-export const oauthClients = pgTable("oauth_clients", {
-  id: uuid().primaryKey().defaultRandom(),
-  name: varchar({ length: 255 }).notNull(),
-  secret: varchar({ length: 255 }),
-  createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+export const oauthClients = sqliteTable("oauth_clients", {
+  id: uuidPrimaryKey(),
+  name: text().notNull(),
+  secret: text(),
+  createdAt: timestampNow(),
   updatedAt: timestamp(),
-  redirectUris: text().array().notNull(),
-  allowedGrants: grantTypes().array().notNull(),
+  redirectUris: text({ mode: "json" }).$type<string[]>().notNull(),
+  allowedGrants: text({ mode: "json" }).$type<(typeof GRANT_TYPES)[number][]>().notNull(),
 });
 
-export const oauthScopes = pgTable(
+export const oauthScopes = sqliteTable(
   "oauth_scopes",
   {
-    id: uuid().primaryKey().defaultRandom(),
+    id: uuidPrimaryKey(),
     name: text().notNull(),
     // Shown on the consent screen in place of the raw scope name.
     description: text(),
-    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    createdAt: timestampNow(),
     updatedAt: timestamp(),
   },
   // `name` is looked up by value (getAllByIdentifiers) and is not unique, so it
@@ -60,18 +60,20 @@ export const oauthScopes = pgTable(
   table => [index("idx_oauth_scopes_name").on(table.name)],
 );
 
-export const oauthAuthCodes = pgTable(
+export const oauthAuthCodes = sqliteTable(
   "oauth_auth_codes",
   {
     code: text().primaryKey(),
     redirectUri: text(),
     codeChallenge: text(),
-    codeChallengeMethod: codeChallengeMethod().notNull().default("plain"),
+    codeChallengeMethod: text({ enum: ["S256", "plain"] })
+      .notNull()
+      .default("plain"),
     nonce: text(),
     authTime: integer(),
     maxAge: integer(),
     expiresAt: timestamp().notNull(),
-    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    createdAt: timestampNow(),
     updatedAt: timestamp(),
     userId: uuid().references(() => users.id, { onDelete: "set null" }),
     clientId: uuid()
@@ -82,7 +84,7 @@ export const oauthAuthCodes = pgTable(
   table => [index("idx_oauth_auth_codes_expires_at").on(table.expiresAt)],
 );
 
-export const oauthTokens = pgTable(
+export const oauthTokens = sqliteTable(
   "oauth_tokens",
   {
     accessToken: text().primaryKey(),
@@ -93,7 +95,7 @@ export const oauthTokens = pgTable(
     // "family" key. The library threads it across rotations; we revoke the whole
     // family on refresh-token reuse or auth-code replay (RFC 9700).
     originatingAuthCodeId: text(),
-    createdAt: timestamp({ precision: 6 }).notNull().defaultNow(),
+    createdAt: timestampNow(),
     updatedAt: timestamp(),
     clientId: uuid()
       .notNull()
@@ -109,7 +111,7 @@ export const oauthTokens = pgTable(
   ],
 );
 
-export const oauthClientScopes = pgTable(
+export const oauthClientScopes = sqliteTable(
   "oauth_client_scopes",
   {
     clientId: uuid()
@@ -122,7 +124,7 @@ export const oauthClientScopes = pgTable(
   table => [primaryKey({ columns: [table.clientId, table.scopeId] })],
 );
 
-export const oauthAuthCodeScopes = pgTable(
+export const oauthAuthCodeScopes = sqliteTable(
   "oauth_auth_code_scopes",
   {
     authCodeCode: text()
@@ -135,7 +137,7 @@ export const oauthAuthCodeScopes = pgTable(
   table => [primaryKey({ columns: [table.authCodeCode, table.scopeId] })],
 );
 
-export const oauthTokenScopes = pgTable(
+export const oauthTokenScopes = sqliteTable(
   "oauth_token_scopes",
   {
     accessToken: text()

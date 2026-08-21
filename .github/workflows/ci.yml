@@ -8,20 +8,6 @@ on:
 jobs:
   server:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: oauth
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: oauth_example
-        ports:
-          - 8888:5432
-        options: >-
-          --health-cmd "pg_isready -U oauth"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -31,11 +17,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # DATABASE_URL is scoped to THIS step only — it must not leak into the test
-      # step, where globalSetup reads process.env.DATABASE_URL for the oauth_test db
+      # step, where globalSetup reads process.env.DATABASE_URL for its own file
       # (dotenv won't override an already-set var, so a leaked value breaks setup).
       - run: pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://oauth:secret@localhost:8888/oauth_example
+          DATABASE_URL: file:./data/oauth.db
       - run: pnpm typecheck
       - run: pnpm run build
       - run: pnpm lint
@@ -50,7 +36,7 @@ jobs:
           openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ci-oidc-key.pem
           docker run -d --name oauth-smoke --network host \
             -e NODE_ENV=production \
-            -e DATABASE_URL=postgresql://oauth:secret@localhost:8888/oauth_example \
+            -e DATABASE_URL=file:/app/data/oauth.db \
             -e OIDC_ISSUER=https://ci.example.com \
             -e SESSION_SECRET="$(openssl rand -hex 32)" \
             -e OIDC_PRIVATE_KEY="$(cat ci-oidc-key.pem)" \

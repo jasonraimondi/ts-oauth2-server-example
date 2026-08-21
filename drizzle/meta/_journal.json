@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1780806231668,
-      "tag": "0000_mean_slapstick",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781385853302,
-      "tag": "0001_workable_stark_industries",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1787239858523,
-      "tag": "0002_boring_invaders",
+      "version": "6",
+      "when": 1787325279325,
+      "tag": "0000_nice_miracleman",
       "breakpoints": true
     }
   ]

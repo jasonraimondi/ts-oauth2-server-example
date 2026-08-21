@@ -11,9 +11,6 @@ TypeScript OAuth2 server example implementation using a Hono server and a Svelte
 pnpm install
 cd example-client && pnpm install && cd ..
 
-# Start database
-docker compose up -d
-
 # Run migrations and seed
 pnpm db:migrate
 pnpm db:seed
@@ -61,9 +58,9 @@ overmind start  # or foreman start
 
 ## Database
 
-- PostgreSQL in Docker; image pinned to `postgres:17` (the unpinned tag broke on the v18 data-dir change)
-- Drizzle ORM (postgres.js driver); dev role/db are `oauth` / `oauth_example`, tests use `oauth_test`
-- The connection string has no `?schema=public` cruft (no `.replace` strips)
+- SQLite file via `@libsql/client`; dev db is `data/oauth.db`, tests rebuild `data/oauth_test.db` on every run
+- Drizzle ORM (`drizzle-orm/libsql`); multi-statement writes use `db.batch()`, not `db.transaction()`, the one atomic shape libsql and D1 share
+- ids are text uuids generated app-side; timestamps are `integer` ms epochs; array columns are JSON text
 - Migrations in `/drizzle`
 
 ## Development Notes

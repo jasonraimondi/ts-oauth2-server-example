@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "./schema.js";
 
@@ -7,11 +7,9 @@ import * as schema from "./schema.js";
 // must match the same option in drizzle.config.ts so runtime queries and the
 // generated migrations agree on column names.
 export function createDb(databaseUrl: string) {
-  const client = postgres(databaseUrl);
+  const client = createClient({ url: databaseUrl });
   const db = drizzle(client, { schema, casing: "snake_case" });
-  // Lets the entry point drain the pool on shutdown; without it a SIGTERM leaves
-  // in-flight queries to be killed by the socket close.
-  const close = (): Promise<void> => client.end({ timeout: 5 });
+  const close = async (): Promise<void> => client.close();
   return { db, close };
 }
 

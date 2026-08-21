@@ -26,6 +26,10 @@ COPY --from=build /app/dist ./dist
 # The migration runner resolves ./drizzle relative to the working directory.
 COPY drizzle ./drizzle
 COPY package.json ./
+# The SQLite file lives on a volume mounted here; the image only provides the
+# directory, owned by the runtime user so the file can be created on first boot.
+RUN mkdir -p data && chown node:node data
+VOLUME /app/data
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

@@ -1,12 +1,12 @@
-import { sql } from "drizzle-orm";
 import { beforeEach } from "vitest";
 
 import { db } from "../app.js";
+import { oauthAuthCodes, oauthTokens } from "../../src/db/schema.js";
 
+// The scope join tables cascade from their parents.
 export async function truncateDynamic(database: typeof db = db): Promise<void> {
-  await database.execute(
-    sql`TRUNCATE "oauth_token_scopes", "oauth_auth_code_scopes", "oauth_tokens", "oauth_auth_codes" RESTART IDENTITY CASCADE;`,
-  );
+  await database.delete(oauthTokens);
+  await database.delete(oauthAuthCodes);
 }
 
 beforeEach(async () => {

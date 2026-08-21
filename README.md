@@ -21,9 +21,9 @@ An example implementation of [@jmondi/oauth2-server](https://github.com/jasonrai
 ## Stack
 
 - **Server** — [Hono](https://hono.dev) on Node (`@hono/node-server`), listening on port `3000` with all routes under the `/api` prefix.
-- **Database** — PostgreSQL via [Drizzle ORM](https://orm.drizzle.team) (postgres.js driver).
+- **Database** — SQLite via [Drizzle ORM](https://orm.drizzle.team) (`@libsql/client`, a plain `file:` database).
 - **Views** — server-rendered login + consent forms using [Hono JSX](https://hono.dev/docs/guides/jsx).
-- **Tests** — [Vitest](https://vitest.dev) integration suite running against a real Postgres test database.
+- **Tests** — [Vitest](https://vitest.dev) integration suite running against a throwaway SQLite file.
 - **Client** — SvelteKit (Svelte 5) app in [`example-client/`](example-client/).
 
 The OAuth2 HTTP endpoints bridge Hono's Fetch `Request`/`Response` to the package via the `@jmondi/oauth2-server/vanilla` adapter (`requestFromVanilla` / `responseToVanilla` / `handleVanillaError`).
@@ -51,16 +51,15 @@ OIDC is enabled on the authorization-code flow. Requesting the `openid` scope ad
 
 ## Getting Started
 
-**Prerequisites:** [Node.js](https://nodejs.org) >= 22, [pnpm](https://pnpm.io) (`npm i -g pnpm`), and [Docker](https://www.docker.com) for Postgres. The toolchain versions are pinned in `mise.toml` — with [mise](https://mise.jdx.dev) installed, `mise install` gets you the right Node and pnpm.
+**Prerequisites:** [Node.js](https://nodejs.org) >= 22 and [pnpm](https://pnpm.io) (`npm i -g pnpm`). The toolchain versions are pinned in `mise.toml` — with [mise](https://mise.jdx.dev) installed, `mise install` gets you the right Node and pnpm.
 
 ```bash
-cp -n .env.example .env   # the defaults already match the bundled docker-compose
+cp -n .env.example .env   # the defaults point at data/oauth.db
 
 pnpm install
 cd example-client && pnpm install --ignore-workspace && cd ..   # the client is a standalone pnpm project
 
-docker compose up -d      # Postgres on localhost:8888
-pnpm db:migrate
+pnpm db:migrate           # creates data/oauth.db
 pnpm db:seed
 ```
 
@@ -79,7 +78,7 @@ Or run both at once with a Procfile manager — [Overmind](https://github.com/Da
 overmind start            # or: foreman start
 ```
 
-To start over from an empty database, run `pnpm db:reset`. It drops the Postgres volume, brings the container back up, migrates, and seeds.
+To start over from an empty database, run `pnpm db:reset`. It deletes `data/oauth.db`, migrates, and seeds.
 
 ## Scripts
 
@@ -108,7 +107,7 @@ Server configuration is read from the environment once at boot and validated wit
 | ------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`         | `development`           | `development` and `test` enable the insecure demo defaults. Anything else fails closed.                 |
 | `PORT`             | `3000`                  | The port the server listens on.                                                                         |
-| `DATABASE_URL`     | _(required)_            | Postgres connection string.                                                                             |
+| `DATABASE_URL`     | _(required)_            | libsql URL of the SQLite file, e.g. `file:./data/oauth.db`.                                             |
 | `OIDC_ISSUER`      | `http://localhost:3000` | Must byte-match the externally reachable base URL. No trailing slash. Must be `https://` in production. |
 | `OIDC_PRIVATE_KEY` | _(none)_                | RSA private key (PEM) for OIDC token signing. Required outside development.                             |
 | `SESSION_SECRET`   | _(none)_                | HS256 secret for the `jid` AS Session cookie. Required outside development.                             |
@@ -213,7 +212,7 @@ A `Dockerfile` builds the same artifact. Its runtime stage sets `ENV NODE_ENV=pr
 ```bash
 pnpm build
 NODE_ENV=production \
-  DATABASE_URL=postgresql://... \
+  DATABASE_URL=file:/var/lib/oauth/oauth.db \
   OIDC_ISSUER=https://auth.example.com \
   OIDC_PRIVATE_KEY="$(cat oidc.pem)" \
   SESSION_SECRET="$(openssl rand -hex 32)" \
@@ -222,7 +221,7 @@ NODE_ENV=production \
 
 **Why there is a build step.** Node's `--experimental-strip-types` cannot run this server. `src/app.tsx` and the views under `src/views/` are JSX. Type stripping removes type annotations only — it does not transform JSX, so the file fails to parse. The forker who tries `node --experimental-strip-types src/index.ts` hits a confusing syntax error, not a missing flag. Compile instead.
 
-**Migrate before you roll out.** Run `pnpm db:migrate:prod` as a one-shot release job, and let it finish before any new replica serves traffic. It uses the compiled migrator in `dist/db/migrate.js`, so the production image can migrate without `drizzle-kit`. The migrator takes a Postgres advisory lock, so two replicas that start together cannot race the same DDL. Never migrate at application boot.
+**Migrate before you roll out.** Run `pnpm db:migrate:prod` as a one-shot release job, and let it finish before any new replica serves traffic. It uses the compiled migrator in `dist/db/migrate.js`, so the production image can migrate without `drizzle-kit`. Never migrate at application boot.
 
 **Probes.** `/healthz` is liveness: it touches nothing and answers while the process is alive. Restart the container when it fails. `/readyz` is readiness: it runs `select 1` and answers 503 when the database is unreachable. Pull the instance out of the load balancer when it fails, but do not restart it — a database outage is not fixed by a restart loop.
 
@@ -265,7 +264,7 @@ Step 1 needs the JWKS to serve more than one key. This example signs with a sing
 Fork it, then rename the parts that are specific to this demo:
 
 - **Package names** — `jmondi-oauth2-example-server` in `package.json`, and `jmondi-oauth2-example-client` in `example-client/package.json`.
-- **Database** — `POSTGRES_DB` and the credentials in `docker-compose.yml`, and the matching `DATABASE_URL` in `.env`.
+- **Database** — the `DATABASE_URL` file path in `.env`. The image declares `/app/data` as a volume; mount persistent storage there.
 - **Issuer** — `OIDC_ISSUER`, on both the server and the BFF. They must agree byte for byte.
 - **Clients** — the client IDs, names, secrets, redirect URIs, and scopes in [`src/db/seed.ts`](src/db/seed.ts). The BFF's `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, and `OAUTH_REDIRECT_URI` must match the row you seed for it.
 
@@ -277,7 +276,7 @@ The parts worth keeping are the ones that took the longest to get right: PKCE S2
 ## Tests
 
 ```bash
-pnpm test          # Vitest integration suite against a real Postgres "oauth_test" db
+pnpm test          # Vitest integration suite against data/oauth_test.db, rebuilt every run
 ```
 
 The suite covers the auth-code + PKCE happy path, refresh, revocation and userinfo, OIDC claims, the consent accept/deny branches, PKCE negatives (missing challenge/verifier, `plain` rejected), `redirect_uri` mismatch, and login hardening (unknown-email and null-hash both return a generic 401). It runs serially against one shared database with between-test truncation.
