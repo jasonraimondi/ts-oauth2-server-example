@@ -1,8 +1,9 @@
 import { pathToFileURL } from "node:url";
 import { and, isNull, lt, or } from "drizzle-orm";
 
-import { closeDb, db } from "./index.js";
+import { createDb, type Database } from "./index.js";
 import { oauthAuthCodes, oauthTokens } from "./schema.js";
+import { env } from "../lib/config.js";
 
 // Revocation here is force-expiry, so reuse detection (RFC 9700) reads dead rows
 // to recognise a replayed token and kill its family. Deleting a row the instant
@@ -19,7 +20,7 @@ export type PruneCounts = { tokens: number; authCodes: number };
  * @param now - the reference time, injectable for tests
  * @returns how many rows each table lost
  */
-export async function prune(database: typeof db = db, now = new Date()): Promise<PruneCounts> {
+export async function prune(database: Database, now = new Date()): Promise<PruneCounts> {
   const cutoff = new Date(now.getTime() - GRACE_MS);
 
   const tokens = await database
@@ -44,7 +45,8 @@ export async function prune(database: typeof db = db, now = new Date()): Promise
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
-  const counts = await prune();
+  const { db, close } = createDb(env.DATABASE_URL);
+  const counts = await prune(db);
   console.log(JSON.stringify({ msg: "pruned expired oauth rows", ...counts }));
-  await closeDb();
+  await close();
 }

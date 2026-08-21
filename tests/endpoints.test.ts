@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import { requestFromVanilla, responseToVanilla } from "@jmondi/oauth2-server/vanilla";
 
-import { app } from "../src/app.js";
-import { authorizationServer, userRepository } from "../src/container.js";
+import { app } from "./app.js";
+import { authorizationServer, userRepository } from "./app.js";
 import { readJson } from "./helpers.js";
 
 const CLIENT_ID = "0e2ec2df-ee53-4327-a472-9d78c278bdbb";

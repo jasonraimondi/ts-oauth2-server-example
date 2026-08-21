@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { OAuthClient } from "@jmondi/oauth2-server";
 
-import { db } from "../src/db/index.js";
+import { db } from "./app.js";
 import { oauthAuthCodeScopes, oauthTokenScopes } from "../src/db/schema.js";
 import { setPassword } from "../src/lib/password.js";
 import { AuthCodeRepository } from "../src/app/oauth/repositories/auth_code_repository.js";

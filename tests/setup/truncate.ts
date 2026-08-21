@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { beforeEach } from "vitest";
 
-import { db } from "../../src/db/index.js";
+import { db } from "../app.js";
 
 export async function truncateDynamic(database: typeof db = db): Promise<void> {
   await database.execute(

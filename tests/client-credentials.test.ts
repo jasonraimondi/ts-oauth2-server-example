@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { app } from "../src/app.js";
+import { app } from "./app.js";
 import { readJson } from "./helpers.js";
 
 // The library auto-enables client_credentials server-wide before enableGrantTypes

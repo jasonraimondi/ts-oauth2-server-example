@@ -6,7 +6,7 @@ import {
   OAuthException,
 } from "@jmondi/oauth2-server";
 
-import { db } from "./db/index.js";
+import type { Database } from "./db/index.js";
 import { ClientRepository } from "./app/oauth/repositories/client_repository.js";
 import { ScopeRepository } from "./app/oauth/repositories/scope_repository.js";
 import { UserRepository, NotFoundError } from "./app/oauth/repositories/user_repository.js";
@@ -17,63 +17,67 @@ import { resolvePrivateKey } from "./lib/oidc_key.js";
 import { env } from "./lib/config.js";
 import { oauthServerLogger } from "./lib/logger.js";
 
-const clientRepository = new ClientRepository(db);
-const scopeRepository = new ScopeRepository(db);
-const userRepository = new UserRepository(db);
-const authCodeRepository = new AuthCodeRepository(db);
-const tokenRepository = new TokenRepository(db);
+export function createContainer(db: Database) {
+  const clientRepository = new ClientRepository(db);
+  const scopeRepository = new ScopeRepository(db);
+  const userRepository = new UserRepository(db);
+  const authCodeRepository = new AuthCodeRepository(db);
+  const tokenRepository = new TokenRepository(db);
 
-const issuer = env.OIDC_ISSUER;
-const jwt = new MyCustomJwtService({ key: resolvePrivateKey() });
+  const issuer = env.OIDC_ISSUER;
+  const jwt = new MyCustomJwtService({ key: resolvePrivateKey() });
 
-const authorizationServer = new AuthorizationServer(
-  clientRepository,
-  tokenRepository,
-  scopeRepository,
-  jwt,
-  {
-    requiresPKCE: true,
-    requiresS256: true,
-    issuer,
-    logger: oauthServerLogger,
-    oidc: {
-      authorizationEndpoint: `${issuer}/api/oauth2/authorize`,
-      tokenEndpoint: `${issuer}/api/oauth2/token`,
-      userinfoEndpoint: `${issuer}/api/oauth2/userinfo`,
-      jwksUri: `${issuer}/.well-known/jwks.json`,
-      // Not part of the OIDC core document the library builds, but the endpoint
-      // is implemented, so advertise it (RFC 7009 §2) rather than making clients
-      // guess the path.
-      metadata: { revocation_endpoint: `${issuer}/api/oauth2/revoke` },
-      // Return only attributes we actually store; the library filters them by the
-      // granted scopes (email -> email, profile -> name) before serving /userinfo.
-      getUserClaims: async subject => {
-        // If the subject no longer exists, surface an RFC 6750 invalid_token so
-        // /userinfo answers 401. Only a genuinely-missing user is swallowed — any
-        // other failure (e.g. the DB being down) propagates instead of masquerading
-        // as "user no longer exists".
-        const user = await userRepository.getUserByCredentials(subject).catch((e: unknown) => {
-          if (e instanceof NotFoundError) return undefined;
-          throw e;
-        });
-        if (!user) throw OAuthException.invalidToken("The user no longer exists");
-        return { sub: subject, email: user.email, name: user.name ?? undefined };
+  const authorizationServer = new AuthorizationServer(
+    clientRepository,
+    tokenRepository,
+    scopeRepository,
+    jwt,
+    {
+      requiresPKCE: true,
+      requiresS256: true,
+      issuer,
+      logger: oauthServerLogger,
+      oidc: {
+        authorizationEndpoint: `${issuer}/api/oauth2/authorize`,
+        tokenEndpoint: `${issuer}/api/oauth2/token`,
+        userinfoEndpoint: `${issuer}/api/oauth2/userinfo`,
+        jwksUri: `${issuer}/.well-known/jwks.json`,
+        // Not part of the OIDC core document the library builds, but the endpoint
+        // is implemented, so advertise it (RFC 7009 §2) rather than making clients
+        // guess the path.
+        metadata: { revocation_endpoint: `${issuer}/api/oauth2/revoke` },
+        // Return only attributes we actually store; the library filters them by the
+        // granted scopes (email -> email, profile -> name) before serving /userinfo.
+        getUserClaims: async subject => {
+          // If the subject no longer exists, surface an RFC 6750 invalid_token so
+          // /userinfo answers 401. Only a genuinely-missing user is swallowed — any
+          // other failure (e.g. the DB being down) propagates instead of masquerading
+          // as "user no longer exists".
+          const user = await userRepository.getUserByCredentials(subject).catch((e: unknown) => {
+            if (e instanceof NotFoundError) return undefined;
+            throw e;
+          });
+          if (!user) throw OAuthException.invalidToken("The user no longer exists");
+          return { sub: subject, email: user.email, name: user.name ?? undefined };
+        },
       },
     },
-  },
-);
+  );
 
-authorizationServer.enableGrantTypes(
-  ["refresh_token", new DateInterval("1h")],
-  [{ grant: "authorization_code", authCodeRepository, userRepository }, new DateInterval("1h")],
-);
+  authorizationServer.enableGrantTypes(
+    ["refresh_token", new DateInterval("1h")],
+    [{ grant: "authorization_code", authCodeRepository, userRepository }, new DateInterval("1h")],
+  );
 
-// Resource-server seam: validates a Bearer access token the same way /userinfo
-// does (typ:at+jwt, alg:RS256, iss equality). Only `issuer` differs from the
-// defaults; revocation is checked separately via tokenRepository at the route.
-const accessTokenVerifier = new AccessTokenVerifier(jwt, {
-  ...DEFAULT_AUTHORIZATION_SERVER_OPTIONS,
-  issuer,
-});
+  // Resource-server seam: validates a Bearer access token the same way /userinfo
+  // does (typ:at+jwt, alg:RS256, iss equality). Only `issuer` differs from the
+  // defaults; revocation is checked separately via tokenRepository at the route.
+  const accessTokenVerifier = new AccessTokenVerifier(jwt, {
+    ...DEFAULT_AUTHORIZATION_SERVER_OPTIONS,
+    issuer,
+  });
 
-export { authorizationServer, db, jwt, userRepository, tokenRepository, accessTokenVerifier };
+  return { authorizationServer, db, jwt, userRepository, tokenRepository, accessTokenVerifier };
+}
+
+export type Container = ReturnType<typeof createContainer>;

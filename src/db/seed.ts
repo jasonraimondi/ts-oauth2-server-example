@@ -2,8 +2,9 @@ import { pathToFileURL } from "node:url";
 
 import { sql } from "drizzle-orm";
 
-import { closeDb, db } from "./index.js";
+import { createDb, type Database } from "./index.js";
 import { oauthClients, oauthClientScopes, oauthScopes, users } from "./schema.js";
+import { env } from "../lib/config.js";
 import { setPassword } from "../lib/password.js";
 
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
@@ -20,7 +21,7 @@ const SCOPE_OPENID_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6071";
 const SCOPE_EMAIL_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6072";
 const SCOPE_PROFILE_ID = "f0a1b2c3-d4e5-4f60-8a1b-2c3d4e5f6073";
 
-export async function seed(database: typeof db = db): Promise<void> {
+export async function seed(database: Database): Promise<void> {
   // Hash via the same helper the app uses, so the bcrypt cost factor lives in one place.
   const passwordHash = await setPassword("password123");
 
@@ -104,6 +105,7 @@ export async function seed(database: typeof db = db): Promise<void> {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
-  await seed();
-  await closeDb();
+  const { db, close } = createDb(env.DATABASE_URL);
+  await seed(db);
+  await close();
 }
