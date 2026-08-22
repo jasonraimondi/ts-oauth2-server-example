@@ -23,3 +23,5 @@ pb-error-report-*.log
 
 # local sqlite databases
 /data/*.db*
+.dev.vars
+.wrangler/

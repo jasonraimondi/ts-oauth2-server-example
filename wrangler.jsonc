@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ts-oauth2-server-example",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "oauth",
+      // Replace with the id printed by `wrangler d1 create oauth`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      // The same drizzle-kit output the Node migrator applies; wrangler reads the
+      // *.sql files and keeps its own journal table.
+      "migrations_dir": "drizzle",
+    },
+  ],
+  // NODE_ENV=production closes every insecure dev default, so the deploy needs
+  // OIDC_PRIVATE_KEY and SESSION_SECRET set with `wrangler secret put`, and
+  // OIDC_ISSUER must be the Worker's public https:// URL. For `wrangler dev`,
+  // override these in .dev.vars.
+  "vars": {
+    "NODE_ENV": "production",
+    "OIDC_ISSUER": "https://ts-oauth2-server-example.example.workers.dev",
+  },
+}

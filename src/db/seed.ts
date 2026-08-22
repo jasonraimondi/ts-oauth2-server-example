@@ -1,10 +1,11 @@
+import "dotenv/config";
 import { pathToFileURL } from "node:url";
 
 import { sql } from "drizzle-orm";
 
 import { createDb, type Database } from "./index.js";
 import { oauthClients, oauthClientScopes, oauthScopes, users } from "./schema.js";
-import { env } from "../lib/config.js";
+import { requireDatabaseUrl } from "../lib/config.js";
 import { setPassword } from "../lib/password.js";
 
 const USER_ID = "dd74961a-c348-4471-98a5-19fc3c5b5079";
@@ -105,7 +106,7 @@ export async function seed(database: Database): Promise<void> {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
-  const { db, close } = createDb(env.DATABASE_URL);
+  const { db, close } = createDb(requireDatabaseUrl());
   await seed(db);
   await close();
 }
