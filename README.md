@@ -256,7 +256,7 @@ Step 1 needs the JWKS to serve more than one key. This example signs with a sing
 
 ### Taking the database to production
 
-SQLite keeps this example runnable with no services to start, and a single-process deployment can stay on it. Anything with more than one replica wants Postgres, and the port back is mostly mechanical. [`034f657`](https://github.com/jasonraimondi/ts-oauth2-server-example/tree/034f657) is the last commit on Postgres, with a working schema, migrator, and `docker-compose.yml` to copy from. What the SQLite version gave up:
+SQLite keeps this example runnable with no services to start, and a single-process deployment can stay on it. Anything with more than one replica wants Postgres, and the port back is mostly mechanical. The [`postgres`](https://github.com/jasonraimondi/ts-oauth2-server-example/tree/postgres) tag marks the last commit on Postgres, with a working schema, migrator, and `docker-compose.yml` to copy from. What the SQLite version gave up:
 
 - **Transactions** — `AuthCodeRepository.persist` and `TokenRepository.persist` use `db.batch()`, the one atomic shape libsql and D1 share. On Postgres, use `db.transaction()`.
 - **Migration lock** — `src/db/migrate.ts` takes no lock, because one file has one writer. Two replicas rolling out together would race the same DDL; the Postgres version wrapped `migrate()` in `pg_advisory_lock`.
