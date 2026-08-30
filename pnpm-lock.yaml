@@ -43,8 +43,8 @@ importers:
         specifier: ^5.20260821.1
         version: 5.20260821.1
       '@types/node':
-        specifier: ^26.2.0
-        version: 26.2.0
+        specifier: ^26.4.0
+        version: 26.4.0
       '@vitest/coverage-v8':
         specifier: ^4.1.8
         version: 4.1.11(vitest@4.1.8)
@@ -68,7 +68,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.8
-        version: 4.1.8(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12))
+        version: 4.1.8(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12))
       wrangler:
         specifier: ^4.125.0
         version: 4.125.0(@cloudflare/workers-types@5.20260821.1)
@@ -163,11 +163,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -1320,8 +1320,8 @@ packages:
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/node@26.2.0':
-    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
+  '@types/node@26.4.0':
+    resolution: {integrity: sha512-faiGnoIrLH/V8cibOMEAZ8pMw6oXqSukl29ra4mN8GdaB2ZewzeaLj+INpV5N+Z1eKWzY+IzaIZH2EIR6YZRNQ==}
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
@@ -1761,8 +1761,8 @@ packages:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
-  picomatch@4.0.5:
-    resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
+  picomatch@4.0.7:
+    resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
   postcss@8.5.26:
@@ -2753,13 +2753,13 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@types/node@26.2.0':
+  '@types/node@26.4.0':
     dependencies:
       undici-types: 8.3.0
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 26.2.0
+      '@types/node': 26.4.0
 
   '@vitest/coverage-v8@4.1.11(vitest@4.1.8)':
     dependencies:
@@ -2773,7 +2773,7 @@ snapshots:
       obug: 2.1.2
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.8(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12))
+      vitest: 4.1.8(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12))
 
   '@vitest/expect@4.1.8':
     dependencies:
@@ -2784,13 +2784,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.8(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12))':
+  '@vitest/mocker@4.1.8(vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12))':
     dependencies:
       '@vitest/spy': 4.1.8
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)
+      vite: 8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -3203,7 +3203,7 @@ snapshots:
 
   picomatch@4.0.4: {}
 
-  picomatch@4.0.5: {}
+  picomatch@4.0.7: {}
 
   postcss@8.5.26:
     dependencies:
@@ -3330,23 +3330,23 @@ snapshots:
     dependencies:
       pathe: 2.0.3
 
-  vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12):
+  vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12):
     dependencies:
       lightningcss: 1.33.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       postcss: 8.5.26
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.2.0
+      '@types/node': 26.4.0
       esbuild: 0.28.2
       fsevents: 2.3.3
       tsx: 4.23.12
 
-  vitest@4.1.8(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)):
+  vitest@4.1.8(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12)):
     dependencies:
       '@vitest/expect': 4.1.8
-      '@vitest/mocker': 4.1.8(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12))
+      '@vitest/mocker': 4.1.8(vite@8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12))
       '@vitest/pretty-format': 4.1.8
       '@vitest/runner': 4.1.8
       '@vitest/snapshot': 4.1.8
@@ -3363,10 +3363,10 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.0.16(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)
+      vite: 8.0.16(@types/node@26.4.0)(esbuild@0.28.2)(tsx@4.23.12)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 26.2.0
+      '@types/node': 26.4.0
       '@vitest/coverage-v8': 4.1.11(vitest@4.1.8)
     transitivePeerDependencies:
       - msw
