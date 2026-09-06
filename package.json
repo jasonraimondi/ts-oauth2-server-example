@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260821.1",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "^4.1.8",
     "drizzle-kit": "^0.31.10",
     "oxlint": "^1.68.0",
