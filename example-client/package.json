@@ -33,6 +33,6 @@
   },
   "type": "module",
   "dependencies": {
-    "jose": "^6.2.9"
+    "jose": "^6.2.12"
   }
 }
