@@ -45,7 +45,7 @@
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.8",
     "drizzle-kit": "^0.31.10",
-    "oxlint": "^1.68.0",
+    "oxlint": "^1.82.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.9.6",
     "tsx": "^4.23.12",
